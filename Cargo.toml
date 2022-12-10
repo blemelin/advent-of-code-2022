@@ -7,100 +7,100 @@ edition = "2021"
 
 [[bin]]
 name = "day1"
-path = "inputs/day1.rs"
+path = "src/day1.rs"
 
 [[bin]]
 name = "day2"
-path = "inputs/day2.rs"
+path = "src/day2.rs"
 
 [[bin]]
 name = "day3"
-path = "inputs/day3.rs"
+path = "src/day3.rs"
 
 [[bin]]
 name = "day4"
-path = "inputs/day4.rs"
+path = "src/day4.rs"
 
 [[bin]]
 name = "day5"
-path = "inputs/day5.rs"
+path = "src/day5.rs"
 
 [[bin]]
 name = "day6"
-path = "inputs/day6.rs"
+path = "src/day6.rs"
 
 [[bin]]
 name = "day7"
-path = "inputs/day7.rs"
+path = "src/day7.rs"
 
 [[bin]]
 name = "day8"
-path = "inputs/day8.rs"
+path = "src/day8.rs"
 
 [[bin]]
 name = "day9"
-path = "inputs/day9.rs"
+path = "src/day9.rs"
 
 [[bin]]
 name = "day10"
-path = "inputs/day10.rs"
+path = "src/day10.rs"
 
 [[bin]]
 name = "day11"
-path = "inputs/day11.rs"
+path = "src/day11.rs"
 
 [[bin]]
 name = "day12"
-path = "inputs/day12.rs"
+path = "src/day12.rs"
 
 [[bin]]
 name = "day13"
-path = "inputs/day13.rs"
+path = "src/day13.rs"
 
 [[bin]]
 name = "day14"
-path = "inputs/day14.rs"
+path = "src/day14.rs"
 
 [[bin]]
 name = "day15"
-path = "inputs/day15.rs"
+path = "src/day15.rs"
 
 [[bin]]
 name = "day16"
-path = "inputs/day16.rs"
+path = "src/day16.rs"
 
 [[bin]]
 name = "day17"
-path = "inputs/day17.rs"
+path = "src/day17.rs"
 
 [[bin]]
 name = "day18"
-path = "inputs/day18.rs"
+path = "src/day18.rs"
 
 [[bin]]
 name = "day19"
-path = "inputs/day19.rs"
+path = "src/day19.rs"
 
 [[bin]]
 name = "day20"
-path = "inputs/day20.rs"
+path = "src/day20.rs"
 
 [[bin]]
 name = "day21"
-path = "inputs/day21.rs"
+path = "src/day21.rs"
 
 [[bin]]
 name = "day22"
-path = "inputs/day22.rs"
+path = "src/day22.rs"
 
 [[bin]]
 name = "day23"
-path = "inputs/day23.rs"
+path = "src/day23.rs"
 
 [[bin]]
 name = "day24"
-path = "inputs/day24.rs"
+path = "src/day24.rs"
 
 [[bin]]
 name = "day25"
-path = "inputs/day25.rs"
+path = "src/day25.rs"
