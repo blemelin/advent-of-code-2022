@@ -1,6 +1,6 @@
 # Advent of Code 2022
 
-This is my solutions to the *Advent of Code* of 2022. All solutions are written in [Rust].
+Those are my solutions for *[Advent of Code]* 2022. All solutions are written in [Rust].
 
 ## Run a solution
 
@@ -13,4 +13,10 @@ When everything's ready, use this command :
 cargo run --bin dayX # Where X is the number of the day.
 ```
 
+## About the inputs
+
+*[Advent of Code]* inputs must not be shared publicly. Thus, my inputs are stored in a private repository (here, a 
+submodule). You'll have to provide your own.
+
+[Advent of Code]: https://adventofcode.com/
 [Rust]: https://www.rust-lang.org/
