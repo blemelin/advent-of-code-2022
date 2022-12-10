@@ -14,12 +14,10 @@ fn main() {
     let mut cycle = 1i64;
     loop {
         if (cycle - 20) % 40 == 0 { signal += cycle * cpu.x; }
+        cycle += 1;
 
         crt.tick(&cpu); // Important! Update Crt before Cpu.
-        let finished = !process.tick(&mut cpu);
-
-        cycle += 1;
-        if finished { break; }
+        if !process.tick(&mut cpu) { break; };
     }
     println!("Part 1 :\n{}", signal);
 
@@ -160,12 +158,10 @@ impl<const W: usize, const H: usize> Crt<W, H> {
         const SPRITE_LEN: i64 = 3;
         const SPRITE_OFFSET: i64 = SPRITE_LEN / 2;
 
-        let ray_x = self.position % W;
-        let ray_y = self.position / W;
+        let (ray_x, ray_y) = (self.position % W, self.position / W);
 
         let sprite_x = cpu.x as i64;
         let sprite_range = sprite_x - SPRITE_OFFSET..=sprite_x + SPRITE_OFFSET;
-
         self.screen[ray_y][ray_x] = if sprite_range.contains(&(ray_x as i64)) {
             '▓'
         } else {
