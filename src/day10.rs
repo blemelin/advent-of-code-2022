@@ -16,8 +16,8 @@ fn main() {
         if (cycle - 20) % 40 == 0 { signal += cycle * cpu.x; }
         cycle += 1;
 
-        crt.tick(&cpu); // Important! Update Crt before Cpu.
-        if !process.tick(&mut cpu) { break; };
+        crt.tick(&cpu);
+        if !process.tick(&mut cpu) { break; }; // Update Cpu last to end a cycle.
     }
     println!("Part 1 :\n{}", signal);
 
