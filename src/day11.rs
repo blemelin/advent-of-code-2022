@@ -1,3 +1,4 @@
+use std::mem;
 use util::{FromLine, FromLines, read};
 
 mod util;
@@ -18,12 +19,12 @@ struct Data(Vec<Monkey>);
 
 impl Data {
     fn part_1(&self) -> usize {
-        // 20 rounds. Distress is divided by 3 before monkey inspection.
+        // 20 rounds. Worry is divided by 3 before monkey inspection.
         Self::monkey_business(self.0.clone(), 20, |it| it / 3)
     }
 
     fn part_2(&self) -> usize {
-        // 10000 rounds. Distress is no longer divided by 3 before monkey inspection.
+        // 10000 rounds. Worry is no longer divided by 3 before monkey inspection.
         // Thus, distress will keep increasing, leading to an integer overflow (even with a u128).
         // We have to find a way to prevent that overflow.
         //
@@ -119,39 +120,39 @@ impl Data {
         //  - W % 30 % 2 is the same as W % 2.
         //
         // We have successfully managed our overflows! Now, here's the code!
-        let modulus = self.0.iter().fold(1, |acc, monkey| acc * monkey.test.divisible_by);
+        let modulo: u64 = self.0.iter().map(|it| it.test.divisible_by).product();
 
-        Self::monkey_business(self.0.clone(), 10000, |it| it % modulus)
+        Self::monkey_business(self.0.clone(), 10000, |it| it % modulo)
     }
 
-    fn monkey_business<F>(mut monkeys: Vec<Monkey>, iterations: usize, distress_manager: F) -> usize
+    fn monkey_business<F>(mut monkeys: Vec<Monkey>, iterations: usize, worry: F) -> usize
         where F: Fn(u64) -> u64 {
         for _ in 0..iterations {
             for i in 0..monkeys.len() {
                 let monkey = &mut monkeys[i];
-                let items = monkey.starting_items.take();
+                let items = monkey.items.take();
                 let operation = monkey.operation;
                 let test = monkey.test;
-                monkey.inspections += items.len();
+                monkey.inspection_count += items.len();
 
                 for mut item in items {
                     // Monkey puts out item.
                     item = operation.apply(item);
 
                     // Monkey gets bored.
-                    item = distress_manager(item);
+                    item = worry(item);
 
                     // Monkey throws item.
                     if test.apply(item) {
-                        monkeys[test.true_throw_to].starting_items.items.push(item)
+                        monkeys[test.true_throw_to].items.items.push(item)
                     } else {
-                        monkeys[test.false_throw_to].starting_items.items.push(item)
+                        monkeys[test.false_throw_to].items.items.push(item)
                     }
                 }
             }
         }
-        monkeys.sort_by_key(|it| it.inspections);
-        monkeys.iter().rev().take(2).map(|it| it.inspections).product()
+        monkeys.sort_by_key(|it| it.inspection_count);
+        monkeys.iter().rev().take(2).map(|it| it.inspection_count).product()
     }
 }
 
@@ -165,39 +166,39 @@ impl FromLines for Data {
 
 #[derive(Debug, Clone)]
 struct Monkey {
-    starting_items: StartingItems,
+    items: Items,
     operation: Operation,
     test: Test,
-    inspections: usize,
+    inspection_count: usize,
 }
 
 impl FromLines for Monkey {
     fn from_lines(lines: &[&str]) -> Self {
-        let starting_items = StartingItems::from_line(&lines[1]);
+        let items = Items::from_line(&lines[1]);
         let operation = Operation::from_line(&lines[2]);
         let test = Test::from_lines(&lines[3..]);
 
         Self {
-            starting_items,
+            items,
             operation,
             test,
-            inspections: 0,
+            inspection_count: 0,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-struct StartingItems {
+struct Items {
     items: Vec<u64>,
 }
 
-impl StartingItems {
+impl Items {
     fn take(&mut self) -> Vec<u64> {
-        self.items.drain(..).collect()
+        mem::replace(&mut self.items, Vec::new())
     }
 }
 
-impl FromLine for StartingItems {
+impl FromLine for Items {
     fn from_line(line: &str) -> Self {
         let items = line[18..]
             .split(',')
