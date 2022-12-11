@@ -132,7 +132,7 @@ impl Data {
                 let items = monkey.starting_items.take();
                 let operation = monkey.operation;
                 let test = monkey.test;
-                monkey.inspection_rate += items.len();
+                monkey.inspections += items.len();
 
                 for mut item in items {
                     // Monkey puts out item.
@@ -150,8 +150,8 @@ impl Data {
                 }
             }
         }
-        monkeys.sort_by_key(|it| it.inspection_rate);
-        monkeys.iter().rev().take(2).map(|it| it.inspection_rate).product()
+        monkeys.sort_by_key(|it| it.inspections);
+        monkeys.iter().rev().take(2).map(|it| it.inspections).product()
     }
 }
 
@@ -168,7 +168,7 @@ struct Monkey {
     starting_items: StartingItems,
     operation: Operation,
     test: Test,
-    inspection_rate: usize,
+    inspections: usize,
 }
 
 impl FromLines for Monkey {
@@ -181,7 +181,7 @@ impl FromLines for Monkey {
             starting_items,
             operation,
             test,
-            inspection_rate: 0,
+            inspections: 0,
         }
     }
 }
