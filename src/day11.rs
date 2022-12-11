@@ -80,7 +80,7 @@ impl Data {
         //  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | ... |
         //  -----------------------------------------------------------------------------
         //  | 0 | 1 | 2 | 3 | 4 | 0 | 1 | 2 | 3 | 4 |  0 |  1 |  2 |  3 |  4 |  0 | ... | -> % 5
-        //  | 0 | 1 | 2 | 0 | 2 | 2 | 0 | 1 | 2 | 0 |  1 |  2 |  0 |  1 |  2 |  0 | ... | -> % 3
+        //  | 0 | 1 | 2 | 0 | 1 | 2 | 0 | 1 | 2 | 0 |  1 |  2 |  0 |  1 |  2 |  0 | ... | -> % 3
         //  | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 |  0 |  1 |  0 |  1 |  0 |  1 | ... | -> % 2
         //
         // Now, where does the three of them starts looping at the same time ? Here, it's at 30,
@@ -93,7 +93,7 @@ impl Data {
         //  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | ... |
         //  -------------------------------------------------------------------------------------------------------------------------------------------------------------
         //  | 0 | 1 | 2 | 3 | 4 | 0 | 1 | 2 | 3 | 4 |  0 |  1 |  2 |  3 |  4 |  0 |  1 |  2 |  3 |  4 |  0 |  1 |  2 |  3 |  4 |  0 |  1 |  2 |  3 |  4 |  0 |  1 | ... | -> % 5
-        //  | 0 | 1 | 2 | 0 | 2 | 2 | 0 | 1 | 2 | 0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 | ... | -> % 3
+        //  | 0 | 1 | 2 | 0 | 1 | 2 | 0 | 1 | 2 | 0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 |  2 |  0 |  1 | ... | -> % 3
         //  | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 |  0 |  1 | ... | -> % 2
         //
         // By doing W % 30, we map each W to a value between 0 and 29. It's also repeating :
@@ -102,8 +102,8 @@ impl Data {
         //  -------------------------------------------------------------------------------
         //  | 0 | 1 | 2 | 3 | ... | 28 | 29 |  0 |  1 | ... |  28 |  29 |   0 |   1 | ... |
         //
-        // Interestingly, we now have 4 repeating sequence of numbers that start over every
-        // 30 numbers. THAT is where the magic happens!
+        // Interestingly, we now have 4 repeating sequence of numbers that starts over every
+        // 30 numbers. THIS is where the magic happens!
         //
         //  | 0 | 1 | 2 | 3 | ... | 28 | 29 | 30 | 31 | ... | 298 | 299 | 300 | 301 | ... |
         //  -------------------------------------------------------------------------------
@@ -113,9 +113,12 @@ impl Data {
         //  | 0 | 1 | 0 | 1 | ... |  0 |  1 |  0 |  1 | ... |   0 |   1 |   0 |   1 | ... | % 2
         //
         // By doing W % 30, we map every W to a value between 0 and 29, keeping it inside our
-        // repeating pattern. Here, W % 30 % 5 is the same as W % 5.
+        // repeating pattern. Inside this pattern :
+        //  - W % 30 % 5 is the same as W % 5.
+        //  - W % 30 % 3 is the same as W % 3.
+        //  - W % 30 % 2 is the same as W % 2.
         //
-        // We have successfully managed our overflows! Ouf!
+        // We have successfully managed our overflows! Now, here's the code!
         let modulus = self.0.iter().fold(1, |acc, monkey| acc * monkey.test.divisible_by);
 
         Self::monkey_business(self.0.clone(), 10000, |it| it % modulus)
