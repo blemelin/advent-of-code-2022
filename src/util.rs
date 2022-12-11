@@ -1,3 +1,4 @@
+use std::any::type_name;
 use std::fmt::Debug;
 use std::fs;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
@@ -7,7 +8,7 @@ use std::str::FromStr;
 pub fn read<T, P>(path: P) -> T
     where T: FromLines,
           P: AsRef<Path> {
-    let file = fs::read_to_string(path).expect("file should be readable");
+    let file = fs::read_to_string(path).expect("input should be readable");
     let lines: Vec<&str> = file.lines().collect();
     T::from_lines(&lines)
 }
@@ -28,7 +29,7 @@ impl<T> FromLine for T
     where T: FromStr,
           <T as FromStr>::Err: Debug {
     fn from_line(line: &str) -> Self {
-        T::from_str(line).expect("line should have valid format")
+        T::from_str(line).expect(&format!("line should be a valid {}", type_name::<T>()))
     }
 }
 

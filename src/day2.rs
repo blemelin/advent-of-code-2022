@@ -3,61 +3,67 @@ use util::{FromLine, FromLines, read};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(rounds) = read("inputs/day2.txt");
-
-    // Part 1
-    let score: u64 = rounds.iter().map(|it| it.score_for_play()).sum();
-    println!("Part 1 : {}", score);
-
-    // Part 2
-    let score: u64 = rounds.iter().map(|it| it.score_for_outcome()).sum();
-    println!("Part 2 : {}", score);
+    let input: Input = read("inputs/day2.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Vec<Round>);
+struct Input {
+    rounds: Vec<Round>,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> u64 {
+        self.rounds
+            .iter()
+            .map(|it| {
+                let player = it.player;
+                let opponent = it.opponent;
+                let outcome = player.outcome_for(opponent);
+                outcome.score() + player.score()
+            })
+            .sum()
+    }
+
+    fn part_2(&self) -> u64 {
+        self.rounds
+            .iter()
+            .map(|it| {
+                let outcome = it.outcome;
+                let opponent = it.opponent;
+                let player = opponent.for_outcome(outcome);
+                outcome.score() + player.score()
+            })
+            .sum()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let rounds = lines.iter().map(line_to!(Round)).collect();
 
-        Self(rounds)
+        Self {
+            rounds
+        }
     }
 }
 
 #[derive(Debug)]
 struct Round {
     opponent: Choice,
-    desired_play: Choice,
-    desired_outcome: Outcome,
-}
-
-impl Round {
-    fn score_for_play(&self) -> u64 {
-        let player_play = self.desired_play;
-        let opponent_play = self.opponent;
-        let outcome = player_play.outcome_for(opponent_play);
-        outcome.score() + player_play.score()
-    }
-    fn score_for_outcome(&self) -> u64 {
-        let outcome = self.desired_outcome;
-        let opponent_play = self.opponent;
-        let player_play = opponent_play.for_outcome(outcome);
-        outcome.score() + player_play.score()
-    }
+    player: Choice,
+    outcome: Outcome,
 }
 
 impl FromLine for Round {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split(' ');
-        let lhs = parts.next().expect("round should have a left-hand side part");
-        let rhs = parts.next().expect("round should have a right-hand side part");
+        let (lhs, rhs) = line.split_once(' ').expect("round should have a left and a right part");
 
         Self {
-            desired_play: Choice::from_line(rhs),
+            player: Choice::from_line(rhs),
             opponent: Choice::from_line(lhs),
-            desired_outcome: Outcome::from_line(rhs),
+            outcome: Outcome::from_line(rhs),
         }
     }
 }

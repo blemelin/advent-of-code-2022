@@ -5,32 +5,41 @@ use util::{FromLine, FromLines, read, Vec2};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(commands) = read("inputs/day9.txt");
-
-    // Part 1
-    let mut rope = Rope::<2>::new();
-    for command in &commands {
-        rope.apply(command);
-    }
-    println!("Part 1 : {:?}", rope.visited());
-
-    // Part 2
-    let mut rope = Rope::<10>::new();
-    for command in &commands {
-        rope.apply(command);
-    }
-    println!("Part 2 : {:?}", rope.visited());
+    let input: Input = read("inputs/day9.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Vec<Command>);
+struct Input {
+    motions: Vec<Motion>,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> usize {
+        let mut rope = Rope::<2>::new();
+        for motion in &self.motions {
+            rope.apply(motion);
+        }
+        rope.visited_count()
+    }
+
+    fn part_2(&self) -> usize {
+        let mut rope = Rope::<10>::new();
+        for motion in &self.motions {
+            rope.apply(motion);
+        }
+        rope.visited_count()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
-        let commands = lines.iter().map(line_to!(Command)).collect();
+        let commands = lines.iter().map(line_to!(Motion)).collect();
 
-        Self(commands)
+        Self {
+            motions: commands
+        }
     }
 }
 
@@ -50,9 +59,9 @@ impl<const N: usize> Rope<N> {
         }
     }
 
-    fn apply(&mut self, command: &Command) {
-        let length = command.length;
-        let head_direction = command.direction;
+    fn apply(&mut self, motion: &Motion) {
+        let length = motion.length;
+        let head_direction = motion.direction;
         for _ in 0..length {
             // Apply motion to head.
             self.knots[0] += head_direction;
@@ -78,22 +87,20 @@ impl<const N: usize> Rope<N> {
         }
     }
 
-    fn visited(&self) -> usize {
+    fn visited_count(&self) -> usize {
         self.visited.len()
     }
 }
 
 #[derive(Debug)]
-struct Command {
+struct Motion {
     direction: Vec2,
     length: usize,
 }
 
-impl FromLine for Command {
+impl FromLine for Motion {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split(' ');
-        let direction = parts.next().expect("command should have a direction");
-        let length = usize::from_line(parts.next().expect("command should have a length"));
+        let (direction, length) = line.split_once(' ').expect("motions should have a direction and a length");
 
         let direction = match direction {
             "U" => vec2!(0,1),
@@ -102,6 +109,7 @@ impl FromLine for Command {
             "R" => vec2!(1,0),
             _ => panic!("{direction} is not a valid direction")
         };
+        let length = usize::from_line(length);
 
         Self {
             direction,

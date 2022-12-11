@@ -3,26 +3,33 @@ use util::{Bounds, FromChar, FromLines, read, Vec2};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(forest) = read("inputs/day8.txt");
-
-    // Part 1
-    let result = forest.count_visible();
-    println!("Part 1 : {}", result);
-
-    // Part 2
-    let result = forest.best_scenic_score();
-    println!("Part 2 : {}", result);
+    let input: Input = read("inputs/day8.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {:?}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Forest);
+struct Input {
+    forest: Forest,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> usize {
+        self.forest.count_visible()
+    }
+
+    fn part_2(&self) -> Option<usize> {
+        self.forest.best_scenic_score()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let forest = Forest::from_lines(lines);
 
-        Self(forest)
+        Self {
+            forest
+        }
     }
 }
 
@@ -103,14 +110,14 @@ impl Forest {
         score
     }
 
-    fn best_scenic_score(&self) -> usize {
+    fn best_scenic_score(&self) -> Option<usize> {
         let width = self.width as isize;
         let height = self.height as isize;
 
-        let mut best = 0;
+        let mut best = None;
         for x in 0..width {
             for y in 0..height {
-                let current = self.scenic_score(vec2!(x, y));
+                let current = Some(self.scenic_score(vec2!(x, y)));
                 if current > best { best = current; }
             }
         }

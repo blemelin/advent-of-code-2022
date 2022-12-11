@@ -3,67 +3,43 @@ use util::{FromLine, FromLines, read};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(program) = read("inputs/day10.txt");
-    let mut cpu = Cpu::new();
-    let mut crt = Crt::<40, 6>::new();
-    let mut process = Process::new(&program);
-
-    // Part 1
-    let mut signal = 0;
-    let mut cycle = 1i64;
-    loop {
-        if (cycle - 20) % 40 == 0 { signal += cycle * cpu.x; }
-        cycle += 1;
-
-        crt.tick(&cpu);
-        if !process.tick(&mut cpu) { break; }; // Update Cpu last to end a cycle.
-    }
-    println!("Part 1 :\n{}", signal);
-
-    // Part 2
-    println!("Part 2 :");
-    for line in crt.screen {
-        println!("{}", line.iter().collect::<String>());
-    }
+    let input: Input = read("inputs/day10.txt");
+    let (part_1, part_2) = input.execute();
+    println!("Part 1 :\n{}", part_1);
+    println!("Part 2 :\n{}", part_2);
 }
 
 #[derive(Debug)]
-struct Data(Program);
+struct Input {
+    program: Program,
+}
 
-impl FromLines for Data {
-    fn from_lines(lines: &[&str]) -> Self {
-        let program = lines.iter().map(line_to!(Instruction)).collect();
+impl Input {
+    fn execute(&self) -> (i64, String) {
+        let mut cpu = Cpu::new();
+        let mut crt = Crt::<40, 6>::new();
+        let mut process = Process::new(&self.program);
 
-        Self(program)
+        let mut signal = 0;
+        let mut cycle = 1;
+        loop {
+            if (cycle) % 40 == 20 { signal += cycle * cpu.x; }
+            cycle += 1;
+
+            crt.tick(&cpu);
+            if !process.tick(&mut cpu) { break; }; // Update Cpu last to end a cycle.
+        }
+
+        (signal, crt.screen.iter().map(|it| it.iter().collect::<String>()).collect::<Vec<String>>().join("\n"))
     }
 }
 
-type Program = Vec<Instruction>;
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let program = lines.iter().map(line_to!(Instruction)).collect();
 
-#[derive(Debug, Copy, Clone)]
-enum Instruction {
-    Noop,
-    AddX(i64),
-}
-
-impl FromLine for Instruction {
-    fn from_line(line: &str) -> Self {
-        let mut parts = line.split(' ');
-        let name = parts.next().expect("instruction should have a name");
-
-        match name {
-            "noop" => {
-                Self::Noop
-            }
-            "addx" => {
-                let value = parts.next().expect("addx instruction should have a value");
-                let value = i64::from_line(value);
-                Self::AddX(value)
-            }
-            _ => {
-                panic!("{name} is not a valid instruction")
-            }
+        Self {
+            program
         }
     }
 }
@@ -169,5 +145,24 @@ impl<const W: usize, const H: usize> Crt<W, H> {
         };
 
         self.position += 1;
+    }
+}
+
+type Program = Vec<Instruction>;
+
+#[derive(Debug, Copy, Clone)]
+enum Instruction {
+    Noop,
+    AddX(i64),
+}
+
+impl FromLine for Instruction {
+    fn from_line(line: &str) -> Self {
+        let parts: Vec<&str> = line.split(' ').collect();
+        match parts[..] {
+            ["noop"] => Self::Noop,
+            ["addx", value] => Self::AddX(i64::from_line(value)),
+            _ => panic!("{line} is not a valid instruction")
+        }
     }
 }

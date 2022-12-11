@@ -3,55 +3,55 @@ use util::{FromLine, FromLines, read};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(file_system) = read("inputs/day7.txt");
-
-    // Part 1
-    let result: usize = file_system.files
-        .iter()
-        .filter(|it| it.parent.is_some() && it.is_directory && it.size < 100000)
-        .map(|it| it.size)
-        .sum();
-    println!("Part 1 : {}", result);
-
-    // Part 2
-    let used_space = file_system.size();
-    let remaining_space = 70000000 - used_space;
-    let result = file_system.files
-        .iter()
-        .filter(|it| it.is_directory && remaining_space + it.size > 30000000)
-        .min_by_key(|it| it.size)
-        .expect("filesystem should have a dir large enough to delete")
-        .size;
-    println!("Part 2 : {}", result);
+    let input: Input = read("inputs/day7.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {:?}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(FileSystem);
+struct Input {
+    file_system: FileSystem,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> usize {
+        self.file_system
+            .files
+            .iter()
+            .filter(|it| it.is_directory && it.size < 100000)
+            .map(|it| it.size)
+            .sum()
+    }
+
+    fn part_2(&self) -> Option<usize> {
+        let used_space = self.file_system.size();
+        let remaining_space = 70000000 - used_space;
+
+        self.file_system
+            .files
+            .iter()
+            .filter(|it| it.is_directory && remaining_space + it.size > 30000000)
+            .map(|it| it.size)
+            .min()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let mut file_system = FileSystem::new();
 
         for line in lines.iter().map(line_to!(HistoryLine)) {
             match line {
-                HistoryLine::Cd(path) => {
-                    file_system.navigate(&path);
-                }
-                HistoryLine::File(path, size) => {
-                    let path = &path;
-                    let size = usize::from_line(&size);
-                    file_system.add_file(path, size);
-                }
-                HistoryLine::Directory(path) => {
-                    let path = &path;
-                    file_system.add_dir(path);
-                }
+                HistoryLine::Cd(name) => file_system.navigate(&name),
+                HistoryLine::File(name, size) => file_system.add_file(&name, size),
+                HistoryLine::Directory(name) => file_system.add_dir(&name),
                 _ => { /* Ignored */ }
             }
         }
 
-        Self(file_system)
+        Self {
+            file_system
+        }
     }
 }
 
@@ -80,12 +80,10 @@ impl FileSystem {
         &self.files[self.current]
     }
 
-    fn find_directory(&self, name : &str) -> Option<usize> {
+    fn find_directory(&self, name: &str) -> Option<usize> {
         self.files
             .iter()
-            .enumerate()
-            .find(|(_, it)| it.parent == Some(self.current) && it.is_directory && it.name == name)
-            .map(|(i, _)| i)
+            .position(|it| it.parent == Some(self.current) && it.is_directory && it.name == name)
     }
 
     fn size(&self) -> usize {
@@ -141,35 +139,18 @@ enum HistoryLine {
     Ls,
     Cd(String),
     Directory(String),
-    File(String, String),
+    File(String, usize),
 }
 
 impl FromLine for HistoryLine {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split(' ');
-        let start = parts.next().expect("history line should contain at least one part");
-        match start {
-            "$" => {
-                let command = parts.next().expect("history line command should have a name");
-                match command {
-                    "ls" => {
-                        Self::Ls
-                    }
-                    "cd" => {
-                        let path = parts.next().expect("history line should have a path when navigating");
-                        Self::Cd(path.into())
-                    }
-                    _ => panic!("{command} is not a valid command")
-                }
-            }
-            "dir" => {
-                let path = parts.next().expect("history line dir should have a path");
-                Self::Directory(path.into())
-            }
-            size => {
-                let path = parts.next().expect("history line file should have a path");
-                Self::File(path.into(), size.into())
-            }
+        let parts: Vec<&str> = line.split(' ').collect();
+        match parts[..] {
+            ["$", "ls"] => Self::Ls,
+            ["$", "cd", path] => Self::Cd(path.into()),
+            ["dir", name] => Self::Directory(name.into()),
+            [size, name] => Self::File(name.into(), usize::from_line(size)),
+            _ => panic!("{line} is not a valid history line")
         }
     }
 }

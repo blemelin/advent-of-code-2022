@@ -3,81 +3,85 @@ use util::{FromChar, FromLine, FromLines, read};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(rucksacks) = read("inputs/day3.txt");
-
-    // Part 1
-    let result: u64 = rucksacks
-        .iter()
-        .filter_map(|it| it.find_duplicate())
-        .map(|it| it.priority())
-        .sum();
-    println!("Part 1 : {}", result);
-
-    // Part 2
-    let result: u64 = rucksacks
-        .chunks(3)
-        .map(Group::from)
-        .filter_map(|it| it.find_duplicate())
-        .map(|it| it.priority())
-        .sum();
-    println!("Part 2 : {}", result);
+    let input: Input = read("inputs/day3.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Vec<Rucksack>);
+struct Input {
+    rucksacks: Vec<Rucksack>,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> u64 {
+        self.rucksacks
+            .iter()
+            .filter_map(|it| it.find_duplicate())
+            .map(|it| it.priority())
+            .sum()
+    }
+
+    fn part_2(&self) -> u64 {
+        self.rucksacks
+            .chunks(3)
+            .map(Group::new)
+            .filter_map(|it| it.find_duplicate())
+            .map(|it| it.priority())
+            .sum()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let rucksacks = lines.iter().map(line_to!(Rucksack)).collect();
 
-        Self(rucksacks)
+        Self {
+            rucksacks
+        }
     }
 }
 
 #[derive(Debug)]
-struct Rucksack(Vec<Item>);
+struct Rucksack {
+    items: Vec<Item>,
+}
 
 impl Rucksack {
     fn find_duplicate(&self) -> Option<Item> {
-        let len = self.0.len() / 2;
-        let lhs = &self.0[0..len];
-        let rhs = &self.0[len..];
+        let (lhs, rhs) = self.items.split_at(self.items.len() / 2);
 
         lhs.iter()
             .find(|it| rhs.contains(*it))
             .map(|it| *it)
     }
-
-    fn items(&self) -> &[Item] {
-        &self.0
-    }
 }
 
 impl FromLine for Rucksack {
     fn from_line(line: &str) -> Self {
-        let items : Vec<Item> = line.chars().map(char_to!(Item)).collect();
-        if items.is_empty() { panic!("rucksack should have at least one item"); }
+        let items: Vec<Item> = line.chars().map(char_to!(Item)).collect();
 
-        Self(items)
+        Self {
+            items
+        }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-struct Item(u64);
+struct Item(u8);
 
 impl Item {
     fn priority(&self) -> u64 {
-        self.0
+        self.0 as u64
     }
 }
 
 impl FromChar for Item {
     fn from_char(char: char) -> Self {
-        let code = char as u64;
+        let code = char as u8;
         match code {
-            /* a..z */ 97..=122 => Self(code - 97 + 1),
-            /* A..Z */ 65..=90 => Self(code - 65 + 26 + 1),
+            b'a'..=b'z' => Self(code - b'a' + 1),
+            b'A'..=b'Z' => Self(code - b'A' + 1 + 26),
             _ => panic!("\"{char}\" is not a valid item")
         }
     }
@@ -87,18 +91,18 @@ impl FromChar for Item {
 struct Group<'a>(&'a [Rucksack]);
 
 impl<'a> Group<'a> {
-    fn from(rucksacks: &'a [Rucksack]) -> Self {
+    fn new(rucksacks: &'a [Rucksack]) -> Self {
         Self(rucksacks)
     }
 
     fn find_duplicate(&self) -> Option<Item> {
         self.0
             .iter()
-            .map(|it| it.items().to_owned())
-            .reduce(|mut acc, it| {
-                acc.retain(|x| it.contains(x));
+            .map(|it| it.items.clone())
+            .reduce(|mut acc, items| {
+                acc.retain(|it| items.contains(it));
                 acc
             })
-            .and_then(|it| it.first().map(|it| *it))
+            .and_then(|it| it.first().cloned())
     }
 }

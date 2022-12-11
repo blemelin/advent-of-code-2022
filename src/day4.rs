@@ -5,26 +5,39 @@ use util::{FromLine, FromLines, read};
 mod util;
 
 fn main() {
-    // Read data
-    let Data(pairs) = read("inputs/day4.txt");
-
-    // Part 1
-    let count = pairs.iter().filter(|it| it.has_full_overlap()).count();
-    println!("Part 1 : {}", count);
-
-    // Part 2
-    let count = pairs.iter().filter(|it| it.has_overlap()).count();
-    println!("Part 2 : {}", count);
+    let input: Input = read("inputs/day4.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Vec<Pair>);
+struct Input {
+    pairs: Vec<Pair>,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> usize {
+        self.pairs
+            .iter()
+            .filter(|it| it.has_full_overlap())
+            .count()
+    }
+
+    fn part_2(&self) -> usize {
+        self.pairs
+            .iter()
+            .filter(|it| it.has_overlap())
+            .count()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let pairs = lines.iter().map(line_to!(Pair)).collect();
 
-        Self(pairs)
+        Self {
+            pairs
+        }
     }
 }
 
@@ -35,20 +48,30 @@ struct Pair {
 }
 
 impl Pair {
-    fn has_overlap(&self) -> bool {
-        self.lhs.contains(&self.rhs) || self.rhs.contains(&self.lhs)
+    fn has_full_overlap(&self) -> bool {
+        let lhs_start = self.lhs.start();
+        let lhs_end = self.lhs.end();
+        let rhs_start = self.rhs.start();
+        let rhs_end = self.rhs.end();
+
+        // Left contains right or right contains left.
+        (rhs_start <= lhs_start && rhs_end >= lhs_end) || (lhs_start <= rhs_start && lhs_end >= rhs_end)
     }
 
-    fn has_full_overlap(&self) -> bool {
-        self.lhs.contains_all(&self.rhs) || self.rhs.contains_all(&self.lhs)
+    fn has_overlap(&self) -> bool {
+        let lhs_start = self.lhs.start();
+        let lhs_end = self.lhs.end();
+        let rhs_start = self.rhs.start();
+        let rhs_end = self.rhs.end();
+
+        // Left overlap with right for at least one.
+        lhs_start <= rhs_end && lhs_end >= rhs_start
     }
 }
 
 impl FromLine for Pair {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split(',');
-        let lhs = parts.next().expect("pair should have a first assignment");
-        let rhs = parts.next().expect("pair should have a second assignment");
+        let (lhs, rhs) = line.split_once(',').expect("pair should have a left and a right assignment");
 
         Self {
             lhs: Assignment::from_line(lhs),
@@ -63,26 +86,18 @@ struct Assignment {
 }
 
 impl Assignment {
-    fn contains(&self, other: &Self) -> bool {
-        for i in other.range.clone() {
-            if self.range.contains(&i) { return true; }
-        }
-        false
+    fn start(&self) -> u64 {
+        *self.range.start()
     }
 
-    fn contains_all(&self, other: &Self) -> bool {
-        for i in other.range.clone() {
-            if !self.range.contains(&i) { return false; }
-        }
-        true
+    fn end(&self) -> u64 {
+        *self.range.end()
     }
 }
 
 impl FromLine for Assignment {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split('-');
-        let start = parts.next().expect("assignment should have a start value");
-        let end = parts.next().expect("assignment should have a end value");
+        let (start, end) = line.split_once('-').expect("assignment should have a start and a end value");
         let start = u64::from_line(start);
         let end = u64::from_line(end);
 

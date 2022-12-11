@@ -1,33 +1,43 @@
-use std::iter::repeat_with;
 use util::{FromLine, FromLines, read};
 
 mod util;
 
 fn main() {
-    // Read data
-    let Data(supplies, commands) = read("inputs/day5.txt");
-
-    // Part 1
-    let mut part1 = supplies.clone();
-    part1.apply(&commands);
-    println!("Part 1 : {}", part1.peek());
-
-    // Part 2
-    let mut part2 = supplies.clone();
-    part2.apply_multiple(&commands);
-    println!("Part 2 : {}", part2.peek());
+    let input: Input = read("inputs/day5.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Supplies, Vec<Command>);
+struct Input {
+    supplies: Supplies,
+    commands: Vec<Command>,
+}
 
-impl FromLines for Data {
+impl Input {
+    fn part_1(&self) -> String {
+        let mut supplies = self.supplies.clone();
+        supplies.apply(&self.commands);
+        supplies.peek()
+    }
+
+    fn part_2(&self) -> String {
+        let mut supplies = self.supplies.clone();
+        supplies.apply_multiple(&self.commands);
+        supplies.peek()
+    }
+}
+
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let mut parts = lines.split(on_empty_line!());
-        let supplies = Supplies::from_lines(parts.next().expect("input data supplies part should exist"));
-        let commands = parts.next().expect("input data commands part should exist").iter().map(line_to!(Command)).collect();
+        let supplies = Supplies::from_lines(parts.next().expect("input should have supplies"));
+        let commands = parts.next().expect("input should have commands").iter().map(line_to!(Command)).collect();
 
-        Self(supplies, commands)
+        Self {
+            supplies,
+            commands,
+        }
     }
 }
 
@@ -64,19 +74,18 @@ impl FromLines for Supplies {
 
         let lines = &lines[..lines.len() - 1]; // Last line (stack indexes) is not used.
         let nb_cols = (lines[0].len() + 1) / 4; // Each column takes 4 chars.
-        let mut stacks: Vec<Vec<char>> = repeat_with(|| Vec::new()).take(nb_cols).collect();
-        stacks = lines.iter().fold(stacks, |mut acc, it| {
-            for (i, chunk) in it.chars().collect::<Vec<char>>().chunks(4).enumerate() {
-                match chunk.iter().nth(1) { // Ex: "[D]". Supply name is at index 1.
-                    Some(' ') => { /* Skip. Empty. */ }
-                    Some(item) => { acc[i].insert(0, *item) }
-                    _ => { /* Skip. Most likely end of line. */ }
+
+        let mut stacks = vec![Stack::new(); nb_cols];
+        for line in lines.iter().rev() {
+            for (i, chunk) in line.chars().collect::<Vec<char>>().chunks(4).enumerate() {
+                let item = chunk.iter().nth(1).unwrap_or(&' ');
+                if !item.is_whitespace() {
+                    stacks[i].push(*item)
                 }
             }
-            acc
-        });
+        }
 
-        Self(stacks.into_iter().map(|it| Stack(it)).collect())
+        Self(stacks)
     }
 }
 
@@ -84,6 +93,10 @@ impl FromLines for Supplies {
 struct Stack(Vec<char>);
 
 impl Stack {
+    fn new() -> Self {
+        Self(Vec::new())
+    }
+
     fn peek(&self) -> Option<char> {
         self.0.last().map(|it| *it)
     }
@@ -97,9 +110,7 @@ impl Stack {
     }
 
     fn pop_multiple(&mut self, size: usize) -> Vec<char> {
-        let start = self.0.len() - size;
-        let end = self.0.len();
-        self.0.splice(start..end, []).collect()
+        self.0.split_off(self.0.len() - size)
     }
 
     fn push_multiple(&mut self, mut items: Vec<char>) {
@@ -116,15 +127,20 @@ struct Command {
 
 impl FromLine for Command {
     fn from_line(line: &str) -> Self {
-        let mut parts = line.split(' ');
-        let count = usize::from_line(parts.nth(1).expect("command should have a count"));
-        let source = usize::from_line(parts.nth(1).expect("command should have a source"));
-        let destination = usize::from_line(parts.nth(1).expect("command should have a destination"));
+        let parts: Vec<&str> = line.splitn(6, ' ').collect();
+        match parts[..] {
+            ["move", count, "from", source, "to", destination] => {
+                let count = usize::from_line(count);
+                let source = usize::from_line(source);
+                let destination = usize::from_line(destination);
 
-        Self {
-            count,
-            source,
-            destination,
+                Self {
+                    count,
+                    source,
+                    destination,
+                }
+            }
+            _ => panic!("{line} is not a valid command")
         }
     }
 }

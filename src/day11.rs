@@ -1,26 +1,24 @@
 use std::mem;
+
 use util::{FromLine, FromLines, read};
 
 mod util;
 
 fn main() {
-    // Read data
-    let data: Data = read("inputs/day11.txt");
-
-    // Part 1
-    println!("Part 1 : {}", data.part_1());
-
-    // Part 2
-    println!("Part 2 : {}", data.part_2());
+    let input: Input = read("inputs/day11.txt");
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
-struct Data(Vec<Monkey>);
+struct Input {
+    monkeys: Vec<Monkey>,
+}
 
-impl Data {
+impl Input {
     fn part_1(&self) -> usize {
         // 20 rounds. Worry is divided by 3 before monkey inspection.
-        Self::monkey_business(self.0.clone(), 20, |it| it / 3)
+        Self::monkey_business(self.monkeys.clone(), 20, |it| it / 3)
     }
 
     fn part_2(&self) -> usize {
@@ -120,9 +118,9 @@ impl Data {
         //  - W % 30 % 2 is the same as W % 2.
         //
         // We have successfully managed our overflows! Now, here's the code!
-        let modulo: u64 = self.0.iter().map(|it| it.test.divisible_by).product();
+        let modulo: u64 = self.monkeys.iter().map(|it| it.test.divisible_by).product();
 
-        Self::monkey_business(self.0.clone(), 10000, |it| it % modulo)
+        Self::monkey_business(self.monkeys.clone(), 10000, |it| it % modulo)
     }
 
     fn monkey_business<F>(mut monkeys: Vec<Monkey>, iterations: usize, worry: F) -> usize
@@ -156,11 +154,13 @@ impl Data {
     }
 }
 
-impl FromLines for Data {
+impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let monkeys = lines.split(on_empty_line!()).map(lines_to!(Monkey)).collect();
 
-        Self(monkeys)
+        Self {
+            monkeys
+        }
     }
 }
 
@@ -174,6 +174,8 @@ struct Monkey {
 
 impl FromLines for Monkey {
     fn from_lines(lines: &[&str]) -> Self {
+        if lines.len() != 6 { panic!("monkey should have 6 lines describing it"); }
+
         let items = Items::from_line(&lines[1]);
         let operation = Operation::from_line(&lines[2]);
         let test = Test::from_lines(&lines[3..]);
@@ -200,6 +202,8 @@ impl Items {
 
 impl FromLine for Items {
     fn from_line(line: &str) -> Self {
+        if line.len() < 18 { panic!("{line} is not a valid starting item list"); }
+
         let items = line[18..]
             .split(',')
             .map(|it| u64::from_line(it.trim()))
@@ -230,6 +234,8 @@ impl Operation {
 
 impl FromLine for Operation {
     fn from_line(line: &str) -> Self {
+        if line.len() < 25 { panic!("{line} is not a valid operation"); }
+
         let operator = &line[23..24];
         let value = &line[25..];
 
@@ -237,7 +243,7 @@ impl FromLine for Operation {
             ("*", "old") => Self::Pow,
             ("*", value) => Self::Multiply(u64::from_line(value)),
             ("+", value) => Self::Add(u64::from_line(value)),
-            _ => panic!("{operator} is not a valid operation")
+            _ => panic!("{line} is not a valid operation")
         }
     }
 }
@@ -257,9 +263,19 @@ impl Test {
 
 impl FromLines for Test {
     fn from_lines(lines: &[&str]) -> Self {
-        let divisible_by = u64::from_line(&lines[0][21..]);
-        let true_throw_to = usize::from_line(&lines[1][29..]);
-        let false_throw_to = usize::from_line(&lines[2][30..]);
+        if lines.len() != 3 { panic!("test should have 3 lines describing it"); }
+
+        let divisible_by = &lines[0];
+        if divisible_by.len() < 21 { panic!("{divisible_by} is not a valid test division statement"); }
+        let divisible_by = u64::from_line(&divisible_by[21..]);
+
+        let true_throw_to = &lines[1];
+        if true_throw_to.len() < 29 { panic!("{true_throw_to} is not a valid test true statement"); }
+        let true_throw_to = usize::from_line(&true_throw_to[29..]);
+
+        let false_throw_to = &lines[2];
+        if false_throw_to.len() < 30 { panic!("{false_throw_to} is not a valid test false statement"); }
+        let false_throw_to = usize::from_line(&false_throw_to[30..]);
 
         Self {
             divisible_by,
