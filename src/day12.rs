@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::time::Instant;
 
 use util::{FromLines, read, Vec2};
 
@@ -21,7 +22,10 @@ struct Input {
 
 impl Input {
     fn execute(&self) -> (u64, u64) {
+        let start = Instant::now();
         let path_search = self.heightmap.search(self.end);
+        let delta = Instant::now() - start;
+        println!("Search took {}s", delta.as_secs_f64());
 
         // Part 1
         let distance_to_top = path_search
@@ -115,6 +119,7 @@ impl Heightmap {
         #[derive(Debug, Eq, PartialEq)]
         struct Node(Position, u64);
 
+        // Reverse order. Smaller cost gets prioritised first.
         impl Ord for Node {
             fn cmp(&self, other: &Self) -> Ordering {
                 other.1.cmp(&self.1)
