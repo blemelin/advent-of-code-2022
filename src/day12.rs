@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use util::{FromLines, read, Vec2};
 
@@ -19,25 +19,24 @@ struct Input {
 }
 
 impl Input {
-    fn execute(&self) -> (usize, usize) {
-        let path_map = self.heightmap.path_map(self.end);
+    fn execute(&self) -> (u64, u64) {
+        let path_search = self.heightmap.search(self.end);
 
         // Part 1
-        let path_to_top_len = path_map
-            .path(self.start)
-            .map(|it| it.len())
+        let distance_to_top = path_search
+            .distance(self.start)
             .unwrap_or(0);
 
         // Part 2
         let lowest = self.heightmap.lowest();
-        let path_to_bottom_len = self.heightmap
+        let shortest_distance_to_top = self.heightmap
             .positions()
-            .filter(|it| self.heightmap.node(*it) == lowest)
-            .filter_map(|it| path_map.path(it).map(|it| it.len()))
+            .filter(|it| self.heightmap.height(*it) == lowest)
+            .filter_map(|it| path_search.distance(it))
             .min()
             .unwrap_or(0);
 
-        (path_to_top_len, path_to_bottom_len)
+        (distance_to_top, shortest_distance_to_top)
     }
 }
 
@@ -46,37 +45,37 @@ type Height = u64;
 
 #[derive(Debug)]
 struct Heightmap {
-    nodes: Vec<Vec<Height>>,
+    heights: Vec<Vec<Height>>,
     width: usize,
     height: usize,
 }
 
 impl Heightmap {
-    fn node(&self, position: Position) -> Height {
-        self.nodes[position.y()][position.x()]
+    fn height(&self, position: Position) -> Height {
+        self.heights[position.y()][position.x()]
     }
 
-    fn nodes(&self) -> impl Iterator<Item=Height> + '_ {
-        self.nodes.iter().map(|it| it.iter().cloned()).flatten()
+    fn heights(&self) -> impl Iterator<Item=Height> + '_ {
+        self.heights.iter().map(|it| it.iter().cloned()).flatten()
+    }
+
+    fn lowest(&self) -> Height {
+        self.heights().min().unwrap_or(0)
     }
 
     fn positions(&self) -> impl Iterator<Item=Position> + '_ {
         (0..self.width).into_iter().map(|x| (0..self.height).into_iter().map(move |y| vec2!(x, y))).flatten()
     }
 
-    fn lowest(&self) -> Height {
-        self.nodes().min().unwrap_or(0)
-    }
-
-    fn neighbours(&self, position: Position) -> Vec<Position> {
-        let height = self.node(position);
+    fn neighbours(&self, position: Position) -> impl Iterator<Item=Position> + '_ {
+        let height = self.height(position);
         let mut neighbours = Vec::with_capacity(4);
 
         // Top
         if position.y() > 0 {
             let other_position = vec2!(position.x(), position.y() - 1);
-            let other_height = self.node(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some(){
+            let other_height = self.height(other_position);
+            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
                 neighbours.push(other_position);
             }
         }
@@ -84,8 +83,8 @@ impl Heightmap {
         // Bottom
         if position.y() < self.height - 1 {
             let other_position = vec2!(position.x(), position.y() + 1);
-            let other_height = self.node(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some(){
+            let other_height = self.height(other_position);
+            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
                 neighbours.push(other_position);
             }
         }
@@ -93,8 +92,8 @@ impl Heightmap {
         // Left
         if position.x() > 0 {
             let other_position = vec2!(position.x() - 1, position.y());
-            let other_height = self.node(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some(){
+            let other_height = self.height(other_position);
+            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
                 neighbours.push(other_position);
             }
         }
@@ -102,45 +101,47 @@ impl Heightmap {
         // Right
         if position.x() < self.width - 1 {
             let other_position = vec2!(position.x() + 1, position.y());
-            let other_height = self.node(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some(){
+            let other_height = self.height(other_position);
+            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
                 neighbours.push(other_position);
             }
         }
 
-        neighbours
+        neighbours.into_iter()
     }
 
-    fn path_map(&self, end: Position) -> PathMap {
-        // Unvisited nodes.
-        let mut unvisited: Vec<Position> = self.positions().collect();
+    fn search(&self, end: Position) -> PathSearch {
+        // Unvisited positions.
+        let mut unvisited: HashSet<Position> = self.positions().collect();
 
-        // Distance from end position to every other node. Default to infinity.
+        // Distance from end to every other position. Default to infinity.
         let mut distances: HashMap<Position, u64> = unvisited.iter().map(|it| (*it, u64::MAX)).collect();
-        *distances.get_mut(&end).expect("end should exist in nodes") = 0;
 
-        // Previous nodes.
+        // Distance to end is 0. If end doesn't exist in distances, nothing happens.
+        distances.entry(end).and_modify(|distance| *distance = 0);
+
+        // Map a position to the next position to go to get closer to the end. Default to None.
         let mut previous: HashMap<Position, Option<Position>> = unvisited.iter().map(|it| (*it, None)).collect();
 
-        // As long as there is unvisited nodes.
+        // As long as there is unvisited positions.
         'top: while !unvisited.is_empty() {
 
-            // Find closest unvisited nodes.
-            if let Some((i, current, distance)) = unvisited.iter()
-                .enumerate()
-                .map(|(i, position)| (i, *position, *distances.get(position).expect("distances should have all nodes")))
-                .min_by_key(|(_, _, distance)| *distance)
-                .filter(|(_, _, distance)| *distance < u64::MAX) {
+            // Find closest unvisited position.
+            // If we get infinity, that means the other positions are unreachable.
+            if let Some((current, distance)) = unvisited.iter()
+                .map(|position| (*position, *distances.get(position).expect("distances should have all nodes")))
+                .min_by_key(|(_, distance)| *distance)
+                .filter(|(_, distance)| *distance < u64::MAX) {
 
-                // Found a reachable node. Mark as visited.
-                unvisited.remove(i);
+                // Found a reachable position. Mark as visited.
+                unvisited.remove(&current);
 
-                // For all unvisited neighbours of this node.
-                for neighbour in self.neighbours(current).iter().filter(|it| unvisited.contains(it)) {
-                    // Current know distance to this node.
+                // For all unvisited neighbours of this position.
+                for neighbour in self.neighbours(current).filter(|it| unvisited.contains(it)) {
+                    // Current known distance to this position.
                     let neighbour_distance = distances.get_mut(&neighbour).expect("distances should have all nodes");
 
-                    // Distance from this node to this neighbour is always one more.
+                    // Distance from this position to this neighbour is current distance plus one.
                     let new_distance = distance + 1;
 
                     if new_distance < *neighbour_distance {
@@ -156,7 +157,8 @@ impl Heightmap {
             }
         }
 
-        PathMap {
+        PathSearch {
+            distances,
             previous,
             end,
         }
@@ -164,22 +166,15 @@ impl Heightmap {
 }
 
 #[derive(Debug)]
-struct Path(Vec<Position>);
-
-impl Path {
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-}
-
-#[derive(Debug)]
-struct PathMap {
+struct PathSearch {
+    distances: HashMap<Position, u64>,
     previous: HashMap<Position, Option<Position>>,
     end: Position,
 }
 
-impl PathMap {
-    fn path(&self, start: Position) -> Option<Path> {
+impl PathSearch {
+    #[allow(unused)]
+    fn path(&self, start: Position) -> Option<Vec<Position>> {
         let mut path = Vec::new();
 
         let mut current = self.previous.get(&start).and_then(|it| *it);
@@ -189,7 +184,7 @@ impl PathMap {
 
             // Check if target reached.
             if current == Some(self.end) {
-                return Some(Path(path));
+                return Some(path);
             }
 
             // Go next step.
@@ -197,6 +192,10 @@ impl PathMap {
         }
 
         None
+    }
+
+    fn distance(&self, start: Position) -> Option<u64> {
+        self.distances.get(&start).cloned()
     }
 }
 
@@ -225,7 +224,7 @@ impl FromLines for Input {
 
         Self {
             heightmap: Heightmap {
-                nodes,
+                heights: nodes,
                 width,
                 height,
             },
