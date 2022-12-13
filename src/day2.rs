@@ -39,33 +39,11 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let rounds = lines.iter().map(line_to!(Round)).collect();
-
-        Self {
-            rounds
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Round {
     opponent: Choice,
     player: Choice,
     outcome: Outcome,
-}
-
-impl FromLine for Round {
-    fn from_line(line: &str) -> Self {
-        let (lhs, rhs) = line.split_once(' ').expect("round should have a left and a right part");
-
-        Self {
-            player: Choice::from_line(rhs),
-            opponent: Choice::from_line(lhs),
-            outcome: Outcome::from_line(rhs),
-        }
-    }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -115,17 +93,6 @@ impl Choice {
     }
 }
 
-impl FromLine for Choice {
-    fn from_line(line: &str) -> Self {
-        match line {
-            "A" | "X" => Self::Rock,
-            "B" | "Y" => Self::Paper,
-            "C" | "Z" => Self::Scissors,
-            _ => panic!("\"{line}\" is not va valid choice")
-        }
-    }
-}
-
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum Outcome {
     Win = 6,
@@ -136,6 +103,39 @@ enum Outcome {
 impl Outcome {
     fn score(&self) -> u64 {
         *self as u64
+    }
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let rounds = lines.iter().map(line_to!(Round)).collect();
+
+        Self {
+            rounds
+        }
+    }
+}
+
+impl FromLine for Round {
+    fn from_line(line: &str) -> Self {
+        let (lhs, rhs) = line.split_once(' ').expect("round should have a left and a right part");
+
+        Self {
+            player: Choice::from_line(rhs),
+            opponent: Choice::from_line(lhs),
+            outcome: Outcome::from_line(rhs),
+        }
+    }
+}
+
+impl FromLine for Choice {
+    fn from_line(line: &str) -> Self {
+        match line {
+            "A" | "X" => Self::Rock,
+            "B" | "Y" => Self::Paper,
+            "C" | "Z" => Self::Scissors,
+            _ => panic!("\"{line}\" is not va valid choice")
+        }
     }
 }
 

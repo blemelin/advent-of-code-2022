@@ -31,16 +31,6 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let pairs = lines.iter().map(line_to!(Pair)).collect();
-
-        Self {
-            pairs
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Pair {
     lhs: Assignment,
@@ -69,17 +59,6 @@ impl Pair {
     }
 }
 
-impl FromLine for Pair {
-    fn from_line(line: &str) -> Self {
-        let (lhs, rhs) = line.split_once(',').expect("pair should have a left and a right assignment");
-
-        Self {
-            lhs: Assignment::from_line(lhs),
-            rhs: Assignment::from_line(rhs),
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Assignment {
     range: RangeInclusive<u64>,
@@ -92,6 +71,27 @@ impl Assignment {
 
     fn end(&self) -> u64 {
         *self.range.end()
+    }
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let pairs = lines.iter().map(line_to!(Pair)).collect();
+
+        Self {
+            pairs
+        }
+    }
+}
+
+impl FromLine for Pair {
+    fn from_line(line: &str) -> Self {
+        let (lhs, rhs) = line.split_once(',').expect("pair should have a left and a right assignment");
+
+        Self {
+            lhs: Assignment::from_line(lhs),
+            rhs: Assignment::from_line(rhs),
+        }
     }
 }
 

@@ -4,8 +4,8 @@ mod util;
 
 fn main() {
     let input: Input = read("inputs/day6.txt");
-    println!("Part 1 : {:?}", input.part_1());
-    println!("Part 2 : {:?}", input.part_2());
+    println!("Part 1 : {}", input.part_1());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
@@ -14,22 +14,12 @@ struct Input {
 }
 
 impl Input {
-    fn part_1(&self) -> Option<usize> {
-        self.buffer.find_marker(4)
+    fn part_1(&self) -> usize {
+        self.buffer.find_marker(4).unwrap_or(0)
     }
 
-    fn part_2(&self) -> Option<usize> {
-        self.buffer.find_marker(14)
-    }
-}
-
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let buffer = Buffer::from_line(lines.get(0).expect("input should have a buffer"));
-
-        Self {
-            buffer
-        }
+    fn part_2(&self) -> usize {
+        self.buffer.find_marker(14).unwrap_or(0)
     }
 }
 
@@ -49,6 +39,16 @@ impl Buffer {
             }
             true
         }).next()
+    }
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let buffer = Buffer::from_line(lines.get(0).expect("input should have a buffer"));
+
+        Self {
+            buffer
+        }
     }
 }
 

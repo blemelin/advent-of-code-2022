@@ -31,6 +31,11 @@ impl Input {
     }
 }
 
+#[derive(Debug)]
+struct Elf {
+    calories: u64,
+}
+
 impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
         let mut elves: Vec<Elf> = lines.split(on_empty_line!()).map(lines_to!(Elf)).collect();
@@ -40,11 +45,6 @@ impl FromLines for Input {
             elves
         }
     }
-}
-
-#[derive(Debug)]
-struct Elf {
-    calories: u64,
 }
 
 impl FromLines for Elf {

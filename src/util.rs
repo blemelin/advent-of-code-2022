@@ -1,7 +1,7 @@
 use std::any::type_name;
 use std::fmt::Debug;
 use std::fs;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -62,26 +62,27 @@ macro_rules! lines_to {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 #[allow(unused)]
-pub struct Vec2(isize, isize);
+pub struct Vec2<T>(T, T);
 
 #[allow(unused)]
-impl Vec2 {
-    pub const fn new(x: isize, y: isize) -> Self {
+impl<T> Vec2<T>
+    where T: Copy {
+    pub const fn new(x: T, y: T) -> Self {
         Self(x, y)
     }
 
-    pub const fn x(&self) -> isize {
+    pub const fn x(&self) -> T {
         self.0
     }
 
-    pub const fn y(&self) -> isize {
+    pub const fn y(&self) -> T {
         self.1
     }
 }
 
-impl Add for Vec2 {
+impl Add for Vec2<usize> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -89,25 +90,47 @@ impl Add for Vec2 {
     }
 }
 
-impl AddAssign for Vec2 {
+impl Add for Vec2<isize> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl Add<Vec2<isize>> for Vec2<usize> {
+    type Output = Option<Self>;
+
+    fn add(self, rhs: Vec2<isize>) -> Self::Output {
+        match (checked_add_signed(self.0, rhs.0), checked_add_signed(self.1, rhs.1)) {
+            (Some(x), Some(y)) => Some(Self(x, y)),
+            _ => None
+        }
+    }
+}
+
+impl Add<Vec2<usize>> for Vec2<isize> {
+    type Output = Option<Self>;
+
+    fn add(self, rhs: Vec2<usize>) -> Self::Output {
+        match (checked_add_unsigned(self.0, rhs.0), checked_add_unsigned(self.1, rhs.1)) {
+            (Some(x), Some(y)) => Some(Self(x, y)),
+            _ => None
+        }
+    }
+}
+
+impl AddAssign for Vec2<usize> {
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0;
         self.1 += rhs.1;
     }
 }
 
-impl Sub for Vec2 {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0 - rhs.0, self.1 - rhs.1)
-    }
-}
-
-impl SubAssign for Vec2 {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
-        self.1 -= rhs.1;
+impl AddAssign for Vec2<isize> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
     }
 }
 
@@ -118,38 +141,19 @@ macro_rules! vec2 {
     }
 }
 
-
-#[derive(Debug)]
-#[allow(unused)]
-pub struct Bounds {
-    min_x: isize,
-    max_x: isize,
-    min_y: isize,
-    max_y: isize,
-}
-
-#[allow(unused)]
-impl Bounds {
-    pub const fn new(min_x: isize, max_x: isize, min_y: isize, max_y: isize) -> Self {
-        Self {
-            min_x,
-            max_x,
-            min_y,
-            max_y,
-        }
-    }
-
-    pub const fn contains(&self, position: Vec2) -> bool {
-        position.0 >= self.min_x &&
-            position.0 <= self.max_x &&
-            position.1 >= self.min_y &&
-            position.1 <= self.max_y
+fn checked_add_signed(lhs: usize, rhs: isize) -> Option<usize> {
+    if rhs >= 0 {
+        lhs.checked_add(rhs as usize)
+    } else {
+        lhs.checked_sub(rhs.unsigned_abs())
     }
 }
 
-#[macro_export]
-macro_rules! bounds {
-    ($min_x:expr, $max_x:expr, $min_y:expr, $max_y:expr) => {
-        Bounds::new($min_x, $max_x, $min_y, $max_y)
-    }
+fn checked_add_unsigned(lhs: isize, rhs: usize) -> Option<isize> {
+    let rhs_div = (rhs / 2) as isize;
+    let rhs_rem = (rhs % 2) as isize;
+
+    lhs.checked_add(rhs_div)
+        .and_then(|lhs| lhs.checked_add(rhs_div))
+        .and_then(|lhs| lhs.checked_add(rhs_rem))
 }

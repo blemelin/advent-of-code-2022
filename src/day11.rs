@@ -154,39 +154,12 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let monkeys = lines.split(on_empty_line!()).map(lines_to!(Monkey)).collect();
-
-        Self {
-            monkeys
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Monkey {
     items: Items,
     operation: Operation,
     test: Test,
     inspection_count: usize,
-}
-
-impl FromLines for Monkey {
-    fn from_lines(lines: &[&str]) -> Self {
-        if lines.len() != 6 { panic!("monkey should have 6 lines describing it"); }
-
-        let items = Items::from_line(&lines[1]);
-        let operation = Operation::from_line(&lines[2]);
-        let test = Test::from_lines(&lines[3..]);
-
-        Self {
-            items,
-            operation,
-            test,
-            inspection_count: 0,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -197,21 +170,6 @@ struct Items {
 impl Items {
     fn take(&mut self) -> Vec<u64> {
         mem::replace(&mut self.items, Vec::new())
-    }
-}
-
-impl FromLine for Items {
-    fn from_line(line: &str) -> Self {
-        if line.len() < 18 { panic!("{line} is not a valid starting item list"); }
-
-        let items = line[18..]
-            .split(',')
-            .map(|it| u64::from_line(it.trim()))
-            .collect();
-
-        Self {
-            items
-        }
     }
 }
 
@@ -232,6 +190,61 @@ impl Operation {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+struct Test {
+    divisible_by: u64,
+    true_throw_to: usize,
+    false_throw_to: usize,
+}
+
+impl Test {
+    fn apply(&self, value: u64) -> bool {
+        value % self.divisible_by == 0
+    }
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let monkeys = lines.split(on_empty_line!()).map(lines_to!(Monkey)).collect();
+
+        Self {
+            monkeys
+        }
+    }
+}
+
+impl FromLines for Monkey {
+    fn from_lines(lines: &[&str]) -> Self {
+        if lines.len() != 6 { panic!("monkey should have 6 lines describing it"); }
+
+        let items = Items::from_line(&lines[1]);
+        let operation = Operation::from_line(&lines[2]);
+        let test = Test::from_lines(&lines[3..]);
+
+        Self {
+            items,
+            operation,
+            test,
+            inspection_count: 0,
+        }
+    }
+}
+
+impl FromLine for Items {
+    fn from_line(line: &str) -> Self {
+        if line.len() < 18 { panic!("{line} is not a valid starting item list"); }
+
+        let items = line[18..]
+            .split(',')
+            .map(|it| u64::from_line(it.trim()))
+            .collect();
+
+        Self {
+            items
+        }
+    }
+}
+
 impl FromLine for Operation {
     fn from_line(line: &str) -> Self {
         if line.len() < 25 { panic!("{line} is not a valid operation"); }
@@ -245,19 +258,6 @@ impl FromLine for Operation {
             ("+", value) => Self::Add(u64::from_line(value)),
             _ => panic!("{line} is not a valid operation")
         }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct Test {
-    divisible_by: u64,
-    true_throw_to: usize,
-    false_throw_to: usize,
-}
-
-impl Test {
-    fn apply(&self, value: u64) -> bool {
-        value % self.divisible_by == 0
     }
 }
 

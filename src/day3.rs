@@ -32,16 +32,6 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let rucksacks = lines.iter().map(line_to!(Rucksack)).collect();
-
-        Self {
-            rucksacks
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Rucksack {
     items: Vec<Item>,
@@ -57,33 +47,12 @@ impl Rucksack {
     }
 }
 
-impl FromLine for Rucksack {
-    fn from_line(line: &str) -> Self {
-        let items: Vec<Item> = line.chars().map(char_to!(Item)).collect();
-
-        Self {
-            items
-        }
-    }
-}
-
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct Item(u8);
 
 impl Item {
     fn priority(&self) -> u64 {
         self.0 as u64
-    }
-}
-
-impl FromChar for Item {
-    fn from_char(char: char) -> Self {
-        let code = char as u8;
-        match code {
-            b'a'..=b'z' => Self(code - b'a' + 1),
-            b'A'..=b'Z' => Self(code - b'A' + 1 + 26),
-            _ => panic!("\"{char}\" is not a valid item")
-        }
     }
 }
 
@@ -104,5 +73,36 @@ impl<'a> Group<'a> {
                 acc
             })
             .and_then(|it| it.first().cloned())
+    }
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let rucksacks = lines.iter().map(line_to!(Rucksack)).collect();
+
+        Self {
+            rucksacks
+        }
+    }
+}
+
+impl FromLine for Rucksack {
+    fn from_line(line: &str) -> Self {
+        let items: Vec<Item> = line.chars().map(char_to!(Item)).collect();
+
+        Self {
+            items
+        }
+    }
+}
+
+impl FromChar for Item {
+    fn from_char(char: char) -> Self {
+        let code = char as u8;
+        match code {
+            b'a'..=b'z' => Self(code - b'a' + 1),
+            b'A'..=b'Z' => Self(code - b'A' + 1 + 26),
+            _ => panic!("\"{char}\" is not a valid item")
+        }
     }
 }

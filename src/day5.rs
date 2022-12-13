@@ -28,19 +28,6 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let mut parts = lines.split(on_empty_line!());
-        let supplies = Supplies::from_lines(parts.next().expect("input should have supplies"));
-        let commands = parts.next().expect("input should have commands").iter().map(line_to!(Command)).collect();
-
-        Self {
-            supplies,
-            commands,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Supplies(Vec<Stack>);
 
@@ -65,27 +52,6 @@ impl Supplies {
             let items = stacks[command.source - 1].pop_multiple(command.count);
             stacks[command.destination - 1].push_multiple(items);
         }
-    }
-}
-
-impl FromLines for Supplies {
-    fn from_lines(lines: &[&str]) -> Self {
-        if lines.len() < 2 { panic!("supplies data should have at least one row (excluding the footer)"); }
-
-        let lines = &lines[..lines.len() - 1]; // Last line (stack indexes) is not used.
-        let nb_cols = (lines[0].len() + 1) / 4; // Each column takes 4 chars.
-
-        let mut stacks = vec![Stack::new(); nb_cols];
-        for line in lines.iter().rev() {
-            for (i, chunk) in line.chars().collect::<Vec<char>>().chunks(4).enumerate() {
-                let item = chunk.iter().nth(1).unwrap_or(&' ');
-                if !item.is_whitespace() {
-                    stacks[i].push(*item)
-                }
-            }
-        }
-
-        Self(stacks)
     }
 }
 
@@ -123,6 +89,40 @@ struct Command {
     count: usize,
     source: usize,
     destination: usize,
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let mut parts = lines.split(on_empty_line!());
+        let supplies = Supplies::from_lines(parts.next().expect("input should have supplies"));
+        let commands = parts.next().expect("input should have commands").iter().map(line_to!(Command)).collect();
+
+        Self {
+            supplies,
+            commands,
+        }
+    }
+}
+
+impl FromLines for Supplies {
+    fn from_lines(lines: &[&str]) -> Self {
+        if lines.len() < 2 { panic!("supplies data should have at least one row (excluding the footer)"); }
+
+        let lines = &lines[..lines.len() - 1]; // Last line (stack indexes) is not used.
+        let nb_cols = (lines[0].len() + 1) / 4; // Each column takes 4 chars.
+
+        let mut stacks = vec![Stack::new(); nb_cols];
+        for line in lines.iter().rev() {
+            for (i, chunk) in line.chars().collect::<Vec<char>>().chunks(4).enumerate() {
+                let item = chunk.iter().nth(1).unwrap_or(&' ');
+                if !item.is_whitespace() {
+                    stacks[i].push(*item)
+                }
+            }
+        }
+
+        Self(stacks)
+    }
 }
 
 impl FromLine for Command {

@@ -5,7 +5,7 @@ mod util;
 fn main() {
     let input: Input = read("inputs/day7.txt");
     println!("Part 1 : {}", input.part_1());
-    println!("Part 2 : {:?}", input.part_2());
+    println!("Part 2 : {}", input.part_2());
 }
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl Input {
             .sum()
     }
 
-    fn part_2(&self) -> Option<usize> {
+    fn part_2(&self) -> usize {
         let used_space = self.file_system.size();
         let remaining_space = 70000000 - used_space;
 
@@ -33,25 +33,7 @@ impl Input {
             .filter(|it| it.is_directory && remaining_space + it.size > 30000000)
             .map(|it| it.size)
             .min()
-    }
-}
-
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let mut file_system = FileSystem::new();
-
-        for line in lines.iter().map(line_to!(HistoryLine)) {
-            match line {
-                HistoryLine::Cd(name) => file_system.navigate(&name),
-                HistoryLine::File(name, size) => file_system.add_file(&name, size),
-                HistoryLine::Directory(name) => file_system.add_dir(&name),
-                _ => { /* Ignored */ }
-            }
-        }
-
-        Self {
-            file_system
-        }
+            .unwrap_or(0)
     }
 }
 
@@ -140,6 +122,25 @@ enum HistoryLine {
     Cd(String),
     Directory(String),
     File(String, usize),
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let mut file_system = FileSystem::new();
+
+        for line in lines.iter().map(line_to!(HistoryLine)) {
+            match line {
+                HistoryLine::Cd(name) => file_system.navigate(&name),
+                HistoryLine::File(name, size) => file_system.add_file(&name, size),
+                HistoryLine::Directory(name) => file_system.add_dir(&name),
+                _ => { /* Ignored */ }
+            }
+        }
+
+        Self {
+            file_system
+        }
+    }
 }
 
 impl FromLine for HistoryLine {

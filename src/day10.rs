@@ -34,16 +34,6 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let program = lines.iter().map(line_to!(Instruction)).collect();
-
-        Self {
-            program
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Cpu {
     // X register.
@@ -154,6 +144,16 @@ type Program = Vec<Instruction>;
 enum Instruction {
     Noop,
     AddX(i64),
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let program = lines.iter().map(line_to!(Instruction)).collect();
+
+        Self {
+            program
+        }
+    }
 }
 
 impl FromLine for Instruction {

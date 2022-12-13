@@ -33,20 +33,13 @@ impl Input {
     }
 }
 
-impl FromLines for Input {
-    fn from_lines(lines: &[&str]) -> Self {
-        let commands = lines.iter().map(line_to!(Motion)).collect();
-
-        Self {
-            motions: commands
-        }
-    }
-}
+type Position = Vec2<isize>;
+type Direction = Vec2<isize>;
 
 #[derive(Debug)]
 struct Rope<const N: usize> {
-    knots: [Vec2; N],
-    visited: HashSet<Vec2>,
+    knots: [Position; N],
+    visited: HashSet<Position>,
 }
 
 impl<const N: usize> Rope<N> {
@@ -54,8 +47,8 @@ impl<const N: usize> Rope<N> {
         if N < 2 { panic!("rope length should be at least 2"); }
 
         Self {
-            knots: [vec2!(0,0); N],
-            visited: HashSet::from([vec2!(0,0)]),
+            knots: [vec2!(0, 0); N],
+            visited: HashSet::from([vec2!(0, 0)]),
         }
     }
 
@@ -94,8 +87,18 @@ impl<const N: usize> Rope<N> {
 
 #[derive(Debug)]
 struct Motion {
-    direction: Vec2,
+    direction: Direction,
     length: usize,
+}
+
+impl FromLines for Input {
+    fn from_lines(lines: &[&str]) -> Self {
+        let commands = lines.iter().map(line_to!(Motion)).collect();
+
+        Self {
+            motions: commands
+        }
+    }
 }
 
 impl FromLine for Motion {
@@ -103,10 +106,10 @@ impl FromLine for Motion {
         let (direction, length) = line.split_once(' ').expect("motions should have a direction and a length");
 
         let direction = match direction {
-            "U" => vec2!(0,1),
-            "D" => vec2!(0,-1),
-            "L" => vec2!(-1,0),
-            "R" => vec2!(1,0),
+            "U" => vec2!(0, 1),
+            "D" => vec2!(0, -1),
+            "L" => vec2!(-1, 0),
+            "R" => vec2!(1, 0),
             _ => panic!("{direction} is not a valid direction")
         };
         let length = usize::from_line(length);
