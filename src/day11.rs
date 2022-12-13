@@ -1,13 +1,17 @@
 use std::mem;
 
-use util::{FromLine, FromLines, read};
+use util::{FromLine, FromLines, read, run};
 
 mod util;
 
 fn main() {
-    let input: Input = read("inputs/day11.txt");
-    println!("Part 1 : {}", input.part_1());
-    println!("Part 2 : {}", input.part_2());
+    let (t0, input) = run(|| read::<Input, _>("inputs/day11.txt"));
+    let (t1, p1) = run(|| input.part_1());
+    let (t2, p2) = run(|| input.part_2());
+
+    println!("Part 1 : {}", p1);
+    println!("Part 2 : {}", p2);
+    println!("Time : {} ns", (t0 + t1 + t2).as_nanos());
 }
 
 #[derive(Debug)]
@@ -205,7 +209,7 @@ impl Test {
 
 impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
-        let monkeys = lines.split(on_empty_line!()).map(lines_to!(Monkey)).collect();
+        let monkeys = lines.split(is_empty!()).map(lines_to!(Monkey)).collect();
 
         Self {
             monkeys

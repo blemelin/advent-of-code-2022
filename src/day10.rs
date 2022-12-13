@@ -1,12 +1,14 @@
-use util::{FromLine, FromLines, read};
+use util::{FromLine, FromLines, read, run};
 
 mod util;
 
 fn main() {
-    let input: Input = read("inputs/day10.txt");
-    let (part_1, part_2) = input.execute();
-    println!("Part 1 :\n{}", part_1);
-    println!("Part 2 :\n{}", part_2);
+    let (t0, input) = run(|| read::<Input, _>("inputs/day10.txt"));
+    let (t1, (p1, p2)) = run(|| input.execute());
+
+    println!("Part 1 :\n{}", p1);
+    println!("Part 2 :\n{}", p2);
+    println!("Time : {} ns", (t0 + t1).as_nanos());
 }
 
 #[derive(Debug)]

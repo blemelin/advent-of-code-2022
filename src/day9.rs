@@ -1,13 +1,21 @@
 use std::collections::HashSet;
 
-use util::{FromLine, FromLines, read, Vec2};
+use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
+// Optimisation opportunity : instead of simulating every knot, only simulate the head and the tail.
+// Tail only has to move when distance to head is greater than the number of knots.
+// Still, it's way more fun to simulate every knot.
+
 fn main() {
-    let input: Input = read("inputs/day9.txt");
-    println!("Part 1 : {}", input.part_1());
-    println!("Part 2 : {}", input.part_2());
+    let (t0, input) = run(|| read::<Input, _>("inputs/day9.txt"));
+    let (t1, p1) = run(|| input.part_1());
+    let (t2, p2) = run(|| input.part_2());
+
+    println!("Part 1 : {}", p1);
+    println!("Part 2 : {}", p2);
+    println!("Time : {} ns", (t0 + t1 + t2).as_nanos());
 }
 
 #[derive(Debug)]

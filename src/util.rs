@@ -4,6 +4,7 @@ use std::fs;
 use std::ops::{Add, AddAssign};
 use std::path::Path;
 use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 pub fn read<T, P>(path: P) -> T
     where T: FromLines,
@@ -11,6 +12,14 @@ pub fn read<T, P>(path: P) -> T
     let file = fs::read_to_string(path).expect("input should be readable");
     let lines: Vec<&str> = file.lines().collect();
     T::from_lines(&lines)
+}
+
+pub fn run<T, F>(operation: F) -> (Duration, T)
+    where F: Fn() -> T {
+    let start = Instant::now();
+    let value = operation();
+    let end = Instant::now();
+    (end - start, value)
 }
 
 pub trait FromChar {
@@ -34,9 +43,16 @@ impl<T> FromLine for T
 }
 
 #[macro_export]
-macro_rules! on_empty_line {
+macro_rules! is_empty {
     () => {
         |it| it.is_empty()
+    }
+}
+
+#[macro_export]
+macro_rules! is_not_empty {
+    () => {
+        |it| !it.is_empty()
     }
 }
 

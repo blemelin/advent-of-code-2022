@@ -1,11 +1,15 @@
-use util::{FromLine, FromLines, read};
+use util::{FromLine, FromLines, read, run};
 
 mod util;
 
 fn main() {
-    let input: Input = read("inputs/day1.txt");
-    println!("Part 1 : {}", input.part_1());
-    println!("Part 2 : {}", input.part_2());
+    let (t0, input) = run(|| read::<Input, _>("inputs/day1.txt"));
+    let (t1, p1) = run(|| input.part_1());
+    let (t2, p2) = run(|| input.part_2());
+
+    println!("Part 1 : {}", p1);
+    println!("Part 2 : {}", p2);
+    println!("Time : {} ns", (t0 + t1 + t2).as_nanos());
 }
 
 #[derive(Debug)]
@@ -38,7 +42,7 @@ struct Elf {
 
 impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
-        let mut elves: Vec<Elf> = lines.split(on_empty_line!()).map(lines_to!(Elf)).collect();
+        let mut elves: Vec<Elf> = lines.split(is_empty!()).map(lines_to!(Elf)).collect();
         elves.sort_by_key(|it| it.calories);
 
         Self {

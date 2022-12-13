@@ -2,15 +2,17 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::time::Instant;
 
-use util::{FromLines, read, Vec2};
+use util::{FromLines, read, run, Vec2};
 
 mod util;
 
 fn main() {
-    let input: Input = read("inputs/day12.txt");
-    let (part_1, part_2) = input.execute();
-    println!("Part 1 : {}", part_1);
-    println!("Part 2 : {}", part_2);
+    let (t0, input) = run(|| read::<Input, _>("inputs/day12.txt"));
+    let (t1, (p1, p2)) = run(|| input.execute());
+
+    println!("Part 1 : {}", p1);
+    println!("Part 2 : {}", p2);
+    println!("Time : {} ns", (t0 + t1).as_nanos());
 }
 
 #[derive(Debug)]
