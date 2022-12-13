@@ -75,7 +75,7 @@ impl Heightmap {
         if position.y() > 0 {
             let other_position = vec2!(position.x(), position.y() - 1);
             let other_height = self.height(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
+            if height <= other_height || height == other_height + 1 {
                 neighbours.push(other_position);
             }
         }
@@ -84,7 +84,7 @@ impl Heightmap {
         if position.y() < self.height - 1 {
             let other_position = vec2!(position.x(), position.y() + 1);
             let other_height = self.height(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
+            if height <= other_height || height == other_height + 1 {
                 neighbours.push(other_position);
             }
         }
@@ -93,7 +93,7 @@ impl Heightmap {
         if position.x() > 0 {
             let other_position = vec2!(position.x() - 1, position.y());
             let other_height = self.height(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
+            if height <= other_height || height == other_height + 1 {
                 neighbours.push(other_position);
             }
         }
@@ -102,7 +102,7 @@ impl Heightmap {
         if position.x() < self.width - 1 {
             let other_position = vec2!(position.x() + 1, position.y());
             let other_height = self.height(other_position);
-            if other_height >= height || height.checked_sub(other_height).filter(|it| *it == 1).is_some() {
+            if height <= other_height || height == other_height + 1 {
                 neighbours.push(other_position);
             }
         }
@@ -139,7 +139,7 @@ impl Heightmap {
                 unvisited.swap_remove(i);
 
                 // For all unvisited neighbours of this position.
-                for neighbour in self.neighbours(current).filter(|it| unvisited.contains(it)) {
+                for neighbour in self.neighbours(current) {
                     // Current known distance to this position.
                     let neighbour_distance = distances.get_mut(&neighbour).expect("distances should have all nodes");
 
