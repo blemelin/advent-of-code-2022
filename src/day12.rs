@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use util::{FromLines, read, Vec2};
 
@@ -112,9 +112,10 @@ impl Heightmap {
 
     fn search(&self, end: Position) -> PathSearch {
         // Unvisited positions.
-        let mut unvisited: HashSet<Position> = self.positions().collect();
+        // Note : Seems fastest to use a Vec than a HashSet, probably because the data is not very big.
+        let mut unvisited: Vec<Position> = self.positions().collect();
 
-        // Distance from end to every other position. Default to infinity.
+        // Distance from end to every other positions. Defaults to infinity.
         let mut distances: HashMap<Position, u64> = unvisited.iter().map(|it| (*it, u64::MAX)).collect();
 
         // Distance to end is 0. If end doesn't exist in distances, nothing happens.
@@ -128,13 +129,14 @@ impl Heightmap {
 
             // Find closest unvisited position.
             // If we get infinity, that means the other positions are unreachable.
-            if let Some((current, distance)) = unvisited.iter()
-                .map(|position| (*position, *distances.get(position).expect("distances should have all nodes")))
-                .min_by_key(|(_, distance)| *distance)
-                .filter(|(_, distance)| *distance < u64::MAX) {
+            if let Some((i, current, distance)) = unvisited.iter()
+                .enumerate()
+                .map(|(i, position)| (i, *position, *distances.get(position).expect("distances should have all nodes")))
+                .min_by_key(|(_, _, distance)| *distance)
+                .filter(|(_, _, distance)| *distance < u64::MAX) {
 
                 // Found a reachable position. Mark as visited.
-                unvisited.remove(&current);
+                unvisited.swap_remove(i);
 
                 // For all unvisited neighbours of this position.
                 for neighbour in self.neighbours(current).filter(|it| unvisited.contains(it)) {
