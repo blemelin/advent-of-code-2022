@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use util::{FromLines, read, Vec2};
 
@@ -111,41 +112,53 @@ impl Heightmap {
     }
 
     fn search(&self, end: Position) -> PathSearch {
-        // Unvisited positions.
-        // Note : Seems fastest to use a Vec than a HashSet, probably because the data is not very big.
-        let mut unvisited: Vec<Position> = self.positions().collect();
+        #[derive(Debug, Eq, PartialEq)]
+        struct Node(Position, u64);
+
+        impl Ord for Node {
+            fn cmp(&self, other: &Self) -> Ordering {
+                other.1.cmp(&self.1)
+            }
+        }
+
+        impl PartialOrd for Node {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        // All positions.
+        let positions: Vec<Position> = self.positions().collect();
+
+        // Visited positions.
+        let mut visited: HashSet<Position> = HashSet::with_capacity(self.height * self.width);
+
+        // Positions to visit.
+        let mut visit_queue: BinaryHeap<Node> = BinaryHeap::with_capacity(self.height * self.width);
+        visit_queue.push(Node(end, 0));
 
         // Distance from end to every other positions. Defaults to infinity.
-        let mut distances: HashMap<Position, u64> = unvisited.iter().map(|it| (*it, u64::MAX)).collect();
-
         // Distance to end is 0. If end doesn't exist in distances, nothing happens.
+        let mut distances: HashMap<Position, u64> = positions.iter().map(|it| (*it, u64::MAX)).collect();
         distances.entry(end).and_modify(|distance| *distance = 0);
 
         // Map a position to the next position to go to get closer to the end. Default to None.
-        let mut previous: HashMap<Position, Option<Position>> = unvisited.iter().map(|it| (*it, None)).collect();
+        let mut previous: HashMap<Position, Option<Position>> = positions.iter().map(|it| (*it, None)).collect();
 
-        // As long as there is unvisited positions.
-        'top: while !unvisited.is_empty() {
-
-            // Find closest unvisited position.
-            // If we get infinity, that means the other positions are unreachable.
-            if let Some((i, current, distance)) = unvisited.iter()
-                .enumerate()
-                .map(|(i, position)| (i, *position, *distances.get(position).expect("distances should have all nodes")))
-                .min_by_key(|(_, _, distance)| *distance)
-                .filter(|(_, _, distance)| *distance < u64::MAX) {
-
-                // Found a reachable position. Mark as visited.
-                unvisited.swap_remove(i);
-
-                // For all unvisited neighbours of this position.
-                for neighbour in self.neighbours(current) {
-                    // Current known distance to this position.
-                    let neighbour_distance = distances.get_mut(&neighbour).expect("distances should have all nodes");
-
-                    // Distance from this position to this neighbour is current distance plus one.
+        // As long as there is positions to visit.
+        while let Some(Node(current, distance)) = visit_queue.pop() {
+            // For all neighbours of this position.
+            for neighbour in self.neighbours(current) {
+                // Mark position as visited, or skip if already visited.
+                if visited.insert(neighbour) {
+                    // Distance from current to this neighbour is current distance plus one.
                     let new_distance = distance + 1;
 
+                    // Visit this neighbour neighbour's next iteration.
+                    visit_queue.push(Node(neighbour, new_distance));
+
+                    // Update known distance to this position, if smaller.
+                    let neighbour_distance = distances.get_mut(&neighbour).expect("distances should have all nodes");
                     if new_distance < *neighbour_distance {
                         let neighbour_previous = previous.get_mut(&neighbour).expect("previous should have all nodes");
 
@@ -153,9 +166,6 @@ impl Heightmap {
                         *neighbour_previous = Some(current);
                     }
                 }
-            } else {
-                // No more reachable nodes.
-                break 'top;
             }
         }
 
