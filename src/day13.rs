@@ -76,21 +76,13 @@ impl Ord for PacketData {
                 lhs.cmp(rhs)
             }
             (Self::List(lhs), Self::List(rhs)) => {
-                // Compare items sequentially.
-                for (lhs, rhs) in lhs.iter().zip(rhs.iter()) {
-                    match lhs.cmp(&rhs) {
-                        Ordering::Equal => { continue; }
-                        ordering => { return ordering; }
-                    }
-                }
-                // Ran out of items. Compare lengths.
-                lhs.len().cmp(&rhs.len())
+                lhs.cmp(rhs)
             }
-            (lhs, Self::Number(rhs)) => {
-                lhs.cmp(&Self::List(vec![Self::Number(*rhs)]))
+            (Self::List(lhs), Self::Number(rhs)) => {
+                lhs.cmp(&vec![Self::Number(*rhs)])
             }
-            (Self::Number(lhs), rhs) => {
-                Self::List(vec![Self::Number(*lhs)]).cmp(rhs)
+            (Self::Number(lhs), Self::List(rhs)) => {
+                vec![Self::Number(*lhs)].cmp(rhs)
             }
         }
     }
