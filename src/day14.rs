@@ -146,7 +146,7 @@ impl<const W: usize, const H: usize> Simulation<W, H> {
 
     fn fill(&mut self, start: &Position) -> usize {
         // Put the first sand block.
-        self.grid[start.y()][start.x()] = Cell::Sand;
+        *self.cell_mut(&start) = Cell::Sand;
 
         // Count of sand blocks added. First one is already done.
         let mut count = 1;
@@ -161,10 +161,12 @@ impl<const W: usize, const H: usize> Simulation<W, H> {
             // For each sand block in current line, try to put a other sand block in each direction.
             // Simulation will end up in a pyramid shape. So no need to simulate the whole line.
             for x in (start.x() - depth)..=(start.x() + depth) {
-                if self.grid[y][x] == Cell::Sand {
+                if *self.cell(&vec2!(x,y)) == Cell::Sand {
+                    let other_y = y + 1;
                     for other_x in [x, x - 1, x + 1] {
-                        if self.grid[y + 1][other_x] == Cell::Empty {
-                            self.grid[y + 1][other_x] = Cell::Sand;
+                        let position = vec2!(other_x, other_y);
+                        if *self.cell(&position) == Cell::Empty {
+                            *self.cell_mut(&position) = Cell::Sand;
                             count += 1;
                         }
                     }
