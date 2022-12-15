@@ -150,6 +150,14 @@ impl AddAssign for Vec2<isize> {
     }
 }
 
+impl<T> FromLine for Vec2<T>
+    where T: FromLine {
+    fn from_line(line: &str) -> Self {
+        let (lhs, rhs) = line.split_once(',').expect("vec2 should have a left and a right part");
+        Self(T::from_line(lhs), T::from_line(rhs))
+    }
+}
+
 #[macro_export]
 macro_rules! vec2 {
     ($x:expr, $y:expr) => {

@@ -1,8 +1,13 @@
-use util::{FromLine, FromLines, read, run};
+use std::fmt;
+use std::iter::successors;
 
-use crate::util::Vec2;
+use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
+
+const SAND_SOURCE: Position = vec2!(500, 0);
+const SIMULATION_WIDTH: usize = SAND_SOURCE.x() * 2 + 1;
+const SIMULATION_HEIGHT: usize = SIMULATION_WIDTH;
 
 fn main() {
     let (t0, input) = run(|| read::<Input, _>("inputs/day14.txt"));
@@ -16,266 +21,201 @@ fn main() {
 
 #[derive(Debug)]
 struct Input {
-    simulation: SimulationGrid,
+    rock_formations: Vec<RockFormation>,
 }
 
 impl Input {
     fn part_1(&self) -> u64 {
-        let mut simulation = self.simulation.clone();
+        let mut simulation = Simulation::<SIMULATION_WIDTH, SIMULATION_HEIGHT>::new();
 
-        println!("Before : ");
-        for y in simulation.min_y..=simulation.max_y {
-            for x in simulation.min_x..=simulation.max_x {
-                match simulation.cell(&vec2!(x,y)) {
-                    SimulationCell::Empty => print!("."),
-                    SimulationCell::Sand => print!("S"),
-                    SimulationCell::Rock => print!("R"),
-                }
+        // Add rock formations
+        for formation in &self.rock_formations {
+            for position in formation.positions() {
+                *simulation.cell_mut(&position) = Cell::Rock;
             }
-            println!();
         }
 
+        // Run simulation
         let mut count = 0;
-        while simulation.add_sand(&vec2!(500, 0)) {
+        while simulation.add_sand(&SAND_SOURCE) {
             count += 1;
         }
-
-        println!("After : ");
-        for y in simulation.min_y..=simulation.max_y {
-            for x in simulation.min_x..=simulation.max_x {
-                match simulation.cell(&vec2!(x,y)) {
-                    SimulationCell::Empty => print!("."),
-                    SimulationCell::Sand => print!("S"),
-                    SimulationCell::Rock => print!("R"),
-                }
-            }
-            println!();
-        }
-
-
         count
     }
 
     fn part_2(&self) -> u64 {
-        0
+        let mut simulation = Simulation::<SIMULATION_WIDTH, SIMULATION_HEIGHT>::new();
+
+        // Add rock formations
+        for formation in &self.rock_formations {
+            for position in formation.positions() {
+                *simulation.cell_mut(&position) = Cell::Rock;
+            }
+        }
+
+        // Add floor
+        let floor_height = self.rock_formations.iter().map(|it| it.max_height()).max().unwrap_or(0) + 2;
+        for x in 0..SIMULATION_WIDTH {
+            *simulation.cell_mut(&vec2!(x,floor_height)) = Cell::Rock;
+        }
+
+        // Run simulation
+        let mut count = 0;
+        while simulation.add_sand(&SAND_SOURCE) {
+            count += 1;
+        }
+        count
+    }
+
+    // Export the simulation to a file.
+    #[allow(unused)]
+    fn export_simulation<const W: usize, const H: usize>(path: &str, simulation: &Simulation<W, H>) {
+        std::fs::write(path, format!("{}", &simulation)).unwrap();
     }
 }
 
 type Position = Vec2<usize>;
+type Direction = Vec2<isize>;
 
 #[derive(Debug, Clone)]
-struct SimulationGrid {
-    // Shape [Y][X]
-    grid: Vec<Vec<SimulationCell>>,
-    min_x: usize,
-    max_x: usize,
-    min_y: usize,
-    max_y: usize,
-    floor_y: Option<usize>,
+struct Simulation<const W: usize, const H: usize> {
+    grid: [[Cell; W]; H],
 }
 
-impl SimulationGrid {
-    fn new(mut min_x: usize, mut max_x: usize, min_y: usize, mut max_y: usize) -> Self {
-        // Grid must be larger to accommodate the sand.
-        //  - Two more spaces at the bottom.
-        //  - One more space to the left
-        //  - One more to the right.
-        println!("{}x{}", min_x, max_x);
-        min_x -= 1;
-        max_x += 1;
-        println!("{}x{}", min_x, max_x);
-        //max_y += 2;
-
-
-        let width = max_x - min_x + 1;
-        let height = max_y - min_y + 1;
-
+impl<const W: usize, const H: usize> Simulation<W, H> {
+    fn new() -> Self {
         Self {
-            grid: vec![vec![SimulationCell::Empty; width]; height],
-            min_x,
-            max_x,
-            min_y,
-            max_y,
-            floor_y: None,
+            grid: [[Cell::Empty; W]; H]
         }
     }
 
-    fn cell(&self, position: &Position) -> &SimulationCell {
-        //println!("Pos : {:?}", position);
-        //println!("MinX : {:?}", self.min_x);
-        //println!("MinY : {:?}", self.min_y);
-        let x = position.x() - self.min_x;
-        let y = position.y() - self.min_y;
-        &self.grid[y][x]
+    fn cell(&self, position: &Position) -> &Cell {
+        &self.grid[position.y()][position.x()]
     }
 
-    fn cell_mut(&mut self, position: &Position) -> &mut SimulationCell {
-        let x = position.x() - self.min_x - 1;
-        let y = position.y() - self.min_y - 1;
-        &mut self.grid[y][x]
+    fn cell_mut(&mut self, position: &Position) -> &mut Cell {
+        &mut self.grid[position.y()][position.x()]
     }
 
     fn is_in_bounds(&self, position: &Position) -> bool {
-        position.x() >= self.min_x - 1 &&
-            position.x() <= self.max_x + 1 &&
-            position.y() >= self.min_y &&
-            position.y() <= self.max_y
-    }
-
-    fn add_rock_formation(&mut self, formation: &RockFormation) {
-        for position in formation.positions() {
-            *self.cell_mut(&position) = SimulationCell::Rock;
-        }
+        position.x() < W && position.y() < H
     }
 
     fn add_sand(&mut self, position: &Position) -> bool {
-        // println!("Add sand");
-        let mut current = *position;
-        loop {
-            let down_pos = current + vec2!(0isize, 1isize);
-            let down_left_pos = current + vec2!(-1isize, 1isize);
-            let down_right_pos = current + vec2!(1isize, 1isize);
+        // Abort if position occupied. Sand cannot flow and settle.
+        if *self.cell(position) != Cell::Empty { return false; }
 
-            let down = down_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
-            let down_left = down_left_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
-            let down_right = down_right_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
+        // Current position
+        let mut current_pos = *position;
 
-            // println!("Currently at : {:?}", current);
-            match down {
-                Some(SimulationCell::Empty) => {
-                    // Falling.
-                    // println!("Fall down : {:?}", down_pos);
-                    current = down_pos.expect("position should exist in simulation");
-                    continue;
-                }
-                Some(SimulationCell::Rock) | Some(SimulationCell::Sand) => {
-                    // Blocked.
-                    // println!("Blocked down : {:?}", down_pos);
-                    match down_left {
-                        Some(SimulationCell::Empty) => {
-                            // Falling.
-                            // println!("Fall down left : {:?}", down_left_pos);
-                            current = down_left_pos.expect("position should exist in simulation");
-                            continue;
-                        }
-                        Some(SimulationCell::Rock) | Some(SimulationCell::Sand) => {
-                            // Blocked.
-                            // println!("Blocked down left : {:?}", down_left_pos);
-                            match down_right {
-                                Some(SimulationCell::Empty) => {
-                                    // Falling.
-                                    // println!("Fall down right : {:?}", down_right_pos);
-                                    current = down_right_pos.expect("position should exist in simulation");
-                                    continue;
-                                }
-                                Some(SimulationCell::Rock) | Some(SimulationCell::Sand) => {
-                                    // Blocked. Cannot move anymore.
-                                    // println!("Blocked down right : {:?}", down_right_pos);
-                                    // println!("Settles at : {:?}", current);
-                                    *self.cell_mut(&current) = SimulationCell::Sand;
-                                    return true;
-                                }
-                                None => { panic!("sand should never land out of bounds to the right"); }
-                            }
-                        }
-                        None => { panic!("sand should never land out of bounds to the left"); }
+        // Directions where the sand can flow, by priority. Down, down left and down right.
+        const DIRECTIONS: [Direction; 3] = [vec2!(0isize, 1isize), vec2!(-1isize, 1isize), vec2!(1isize, 1isize)];
+
+        'step: loop {
+            // Fall.
+            'direction: for direction in &DIRECTIONS {
+                let next_pos = current_pos + *direction;
+                let next_cell = next_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
+
+                match next_cell {
+                    // Empty. Fall.
+                    Some(Cell::Empty) => {
+                        current_pos = next_pos.expect("position should exist since cell exist");
+                        continue 'step;
+                    }
+                    // Blocked. Check next direction.
+                    Some(Cell::Rock) | Some(Cell::Sand) => {
+                        continue 'direction;
+                    }
+                    // Out of bounds. Can settle. Abort.
+                    None => {
+                        return false;
                     }
                 }
-                None => {
-                    // Out of bounds.
-                    return false;
-                }
             }
+
+            // Can't fall anymore. Settle.
+            *self.cell_mut(&current_pos) = Cell::Sand;
+            return true;
         }
     }
 }
 
-#[derive(Debug, Clone)]
-enum SimulationCell {
+impl<const W: usize, const H: usize> fmt::Display for Simulation<W, H> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for y in 0..W {
+            for x in 0..H {
+                let position = vec2!(x, y);
+                if position == SAND_SOURCE {
+                    write!(f, "+")?;
+                } else {
+                    write!(f, "{}", self.cell(&position))?;
+                }
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+enum Cell {
     Empty,
     Rock,
     Sand,
+}
+
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Cell::Empty => write!(f, "."),
+            Cell::Sand => write!(f, "o"),
+            Cell::Rock => write!(f, "#"),
+        }
+    }
 }
 
 #[derive(Debug)]
 struct RockFormation(Vec<Position>);
 
 impl RockFormation {
-    fn positions(&self) -> impl Iterator<Item=&Position> + '_ {
-        self.0.iter()
+    fn positions(&self) -> impl Iterator<Item=Position> + '_ {
+        self.0.iter().zip(self.0[1..].iter()).map(|(start, end)| {
+            let direction = {
+                let x = if start.x() < end.x() { 1isize } else if start.x() > end.x() { -1isize } else { 0 };
+                let y = if start.y() < end.y() { 1isize } else if start.y() > end.y() { -1isize } else { 0 };
+                vec2!(x, y)
+            };
+
+            successors(Some(*start), move |position| {
+                if position != end {
+                    Some((*position + direction).expect("rock position should be positive at all times"))
+                } else {
+                    None
+                }
+            })
+        }).flatten()
     }
 
-    fn min_x(&self) -> usize {
-        self.positions().map(|it| it.x()).min().unwrap_or(0)
-    }
-
-    fn max_x(&self) -> usize {
-        self.positions().map(|it| it.x()).max().unwrap_or(0)
-    }
-
-    #[allow(unused)]
-    fn min_y(&self) -> usize {
-        self.positions().map(|it| it.y()).min().unwrap_or(0)
-    }
-
-    fn max_y(&self) -> usize {
+    fn max_height(&self) -> usize {
         self.positions().map(|it| it.y()).max().unwrap_or(0)
     }
 }
 
 impl FromLines for Input {
     fn from_lines(lines: &[&str]) -> Self {
-        let simulation = SimulationGrid::from_lines(lines);
+        let rock_formations = lines.iter().map(line_to!(RockFormation)).collect();
 
         Self {
-            simulation
+            rock_formations
         }
-    }
-}
-
-impl FromLines for SimulationGrid {
-    fn from_lines(lines: &[&str]) -> Self {
-        let formations: Vec<RockFormation> = lines.iter().map(line_to!(RockFormation)).collect();
-        let mut min_x = formations.iter().map(|it| it.min_x()).min().unwrap_or(0);
-        let mut max_x = formations.iter().map(|it| it.max_x()).max().unwrap_or(0);
-        let mut min_y = 0; // Always 0.
-        let mut max_y = formations.iter().map(|it| it.max_y()).max().unwrap_or(0);
-
-        let mut simulation = Self::new(min_x, max_x, min_y, max_y);
-        for formation in formations {
-            simulation.add_rock_formation(&formation);
-        }
-
-        simulation
     }
 }
 
 impl FromLine for RockFormation {
     fn from_line(line: &str) -> Self {
-        // Read rock formations as lines.
-        let lines: Vec<Vec2<usize>> = line.split(" -> ").map(|it| {
-            let (lhs, rhs) = it.split_once(',').expect("point should have two coordinates");
-            vec2!(usize::from_line(lhs), usize::from_line(rhs))
-        }).collect();
-
-        // Each formation must have two points.
-        if lines.len() < 2 { panic!("rock formation should have at least two points"); }
-
-        // Convert each rock formation line to a set of points.
-        let mut points = Vec::new();
-        for (start, end) in lines.iter().zip(lines[1..].iter()).map(|(start, end)| (*start, *end)) {
-            let direction = {
-                let x = if start.x() < end.x() { 1isize } else if start.x() > end.x() { -1isize } else { 0 };
-                let y = if start.y() < end.y() { 1isize } else if start.y() > end.y() { -1isize } else { 0 };
-                vec2!(x, y)
-            };
-            let mut current = start;
-            loop {
-                points.push(vec2!(current.x() as usize, current.y() as usize));
-                if current == end { break; }
-                current = (current + direction).expect("rock position should be positive at all times");
-            }
-        }
+        let points: Vec<Position> = line.split(" -> ").map(line_to!(Vec2<usize>)).collect();
+        if points.len() < 2 { panic!("rock formation should have at least two points"); }
 
         Self(points)
     }
