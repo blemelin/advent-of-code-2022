@@ -22,8 +22,6 @@ fn main() {
     println!("Part 1 : {}", p1);
     println!("Part 2 : {}", p2);
     println!("Time : {} ns", (t0 + t1 + t2).as_nanos());
-    println!("Time : {} ns", (t1).as_nanos());
-    println!("Time : {} ns", (t2).as_nanos());
 }
 
 #[derive(Debug)]
