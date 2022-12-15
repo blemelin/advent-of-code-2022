@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
-use std::ops::RangeInclusive;
 
-use util::{FromChar, FromLine, FromLines, read, run, Vec2};
+use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
@@ -21,13 +20,20 @@ struct Input {
 }
 
 impl Input {
-    fn part_1(&self) -> u64 {
-        println!("{:#?}", self.report);
+    fn part_1(&self) -> i64 {
+        // Extract slices at height 2 000 000.
+        let slices = self.report.slices(2_000_000);
+        //let slices = self.report.slices(10);
 
-        0
+        // Counts positions covered by slice.
+        slices.iter().map(|it| it.len()).sum()
     }
 
     fn part_2(&self) -> u64 {
+        // Try to find a slice have
+        for y in 0..20 {
+
+        }
         0
     }
 }
@@ -40,7 +46,7 @@ struct Report {
 }
 
 impl Report {
-    fn slice(&self, height: i64) -> Vec<Slice> {
+    fn slices(&self, height: i64) -> Vec<Slice> {
         // Collect all slices.
         let mut slices: Vec<Slice> = self.sensors
             .iter()
@@ -53,19 +59,31 @@ impl Report {
                 // How much does this sensor overlap ?
                 let overlap = distance - (height - y).abs();
                 if overlap >= 0 {
-                    Some(Slice(x - overlap..=x + overlap))
+                    Some(Slice::new(x - overlap, x + overlap))
                 } else {
                     None
                 }
             })
             .collect();
 
-        // Merge slices.
+
+        // Merge overlapping slices.
         let mut current = 0; // Current slice that we are merging into.
         slices.sort(); // Sort slices (by start value).
+        for other in 1..slices.len() {
+            let other_slice = slices[other];
+            let current_slice = &mut slices[current];
+            if current_slice.overlap_end(&other_slice) {
+                current_slice.merge_end(&other_slice);
+            } else {
+                current += 1;
+                slices[current] = other_slice;
+            }
+        }
+        slices.resize_with(slices.len().min(current + 1), || panic!("new size should be smaller or equal after merging"));
 
-        for i in 1..slices.len() {}
-        todo!()
+        // Resulting non-overlapping slices.
+        slices
     }
 }
 
@@ -75,30 +93,36 @@ struct Sensor {
     distance: i64,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-struct Slice(RangeInclusive<i64>);
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+struct Slice {
+    start: i64,
+    end: i64,
+}
 
 impl Slice {
-    fn start(&self) -> &i64 {
-        self.0.start()
+    fn new(start: i64, end: i64) -> Self {
+        Self {
+            start,
+            end,
+        }
     }
 
-    fn end(&self) -> &i64 {
-        self.0.end()
+    fn len(&self) -> i64 {
+        self.end - self.start
     }
 
-    fn overlap(&self, other : &Self) -> bool {
-        self.end() <= other.start()
+    fn overlap_end(&self, other: &Self) -> bool {
+        other.start <= self.end
     }
 
-    fn merge(&self, other : &Self) -> Self {
-        Self()
+    fn merge_end(&mut self, other: &Self) {
+        self.end = self.end.max(other.end);
     }
 }
 
 impl Ord for Slice {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.start().cmp(&other.start())
+        self.start.cmp(&other.start)
     }
 }
 
@@ -130,7 +154,7 @@ impl FromLines for Report {
 
 impl FromLine for Sensor {
     fn from_line(line: &str) -> Self {
-        fn find_coordinate(mut line: &str, start_delimiter: char, end_delimiter: Option<char>) -> (&str, &str) {
+        fn find_coordinate(line: &str, start_delimiter: char, end_delimiter: Option<char>) -> (&str, &str) {
             let start_pos = line.find(start_delimiter).expect("delimiter should exist");
             let end_pos = end_delimiter.map(|end_delimiter| line.find(end_delimiter).expect("delimiter should exist")).unwrap_or(line.len());
             let coordinate = &line[start_pos + 1..end_pos];
