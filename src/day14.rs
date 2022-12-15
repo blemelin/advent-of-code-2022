@@ -5,6 +5,11 @@ use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
+// Optimisation opportunity : the grid is way too big for the problem. It's possible to shrink it.
+// The required height is equal to the maximum rock Y position. The required width is equal
+// to height + height - 1. The problem here lies in the offset that this creates, and I've spent
+// already too much time into this.
+
 const SAND_SOURCE: Position = vec2!(500, 0);
 const SIMULATION_WIDTH: usize = SAND_SOURCE.x() * 2 + 1;
 const SIMULATION_HEIGHT: usize = SIMULATION_WIDTH;
@@ -17,6 +22,8 @@ fn main() {
     println!("Part 1 : {}", p1);
     println!("Part 2 : {}", p2);
     println!("Time : {} ns", (t0 + t1 + t2).as_nanos());
+    println!("Time : {} ns", (t1).as_nanos());
+    println!("Time : {} ns", (t2).as_nanos());
 }
 
 #[derive(Debug)]
@@ -77,7 +84,7 @@ impl Input {
 type Position = Vec2<usize>;
 type Direction = Vec2<isize>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Simulation<const W: usize, const H: usize> {
     grid: [[Cell; W]; H],
 }
