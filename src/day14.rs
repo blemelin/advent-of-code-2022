@@ -30,7 +30,7 @@ struct Input {
 }
 
 impl Input {
-    fn part_1(&self) -> u64 {
+    fn part_1(&self) -> usize {
         let mut simulation = Simulation::<SIMULATION_WIDTH, SIMULATION_HEIGHT>::new();
 
         // Add rock formations
@@ -41,14 +41,10 @@ impl Input {
         }
 
         // Run simulation
-        let mut count = 0;
-        while simulation.add_sand(&SAND_SOURCE) {
-            count += 1;
-        }
-        count
+        simulation.flow(&SAND_SOURCE)
     }
 
-    fn part_2(&self) -> u64 {
+    fn part_2(&self) -> usize {
         let mut simulation = Simulation::<SIMULATION_WIDTH, SIMULATION_HEIGHT>::new();
 
         // Add rock formations
@@ -65,11 +61,7 @@ impl Input {
         }
 
         // Run simulation
-        let mut count = 0;
-        while simulation.add_sand(&SAND_SOURCE) {
-            count += 1;
-        }
-        count
+        simulation.fill(&SAND_SOURCE)
     }
 
     // Export the simulation to a file.
@@ -106,43 +98,86 @@ impl<const W: usize, const H: usize> Simulation<W, H> {
         position.x() < W && position.y() < H
     }
 
-    fn add_sand(&mut self, position: &Position) -> bool {
-        // Abort if position occupied. Sand cannot flow and settle.
-        if *self.cell(position) != Cell::Empty { return false; }
+    fn flow(&mut self, start: &Position) -> usize {
+        // Count of sand blocks added.
+        let mut count = 0;
 
-        // Current position
-        let mut current_pos = *position;
+        'flow: loop {
+            // Current position
+            let mut current_pos = *start;
 
-        // Directions where the sand can flow, by priority. Down, down left and down right.
-        const DIRECTIONS: [Direction; 3] = [vec2!(0isize, 1isize), vec2!(-1isize, 1isize), vec2!(1isize, 1isize)];
+            // Abort if current position is occupied. Sand cannot settle anymore.
+            if *self.cell(&current_pos) != Cell::Empty { break 'flow; }
 
-        'step: loop {
-            // Fall.
-            'direction: for direction in &DIRECTIONS {
-                let next_pos = current_pos + *direction;
-                let next_cell = next_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
+            // Directions where the sand can flow, by priority. Down, down left and down right.
+            const DIRECTIONS: [Direction; 3] = [vec2!(0isize, 1isize), vec2!(-1isize, 1isize), vec2!(1isize, 1isize)];
 
-                match next_cell {
-                    // Empty. Fall.
-                    Some(Cell::Empty) => {
-                        current_pos = next_pos.expect("position should exist since cell exist");
-                        continue 'step;
+            'step: loop {
+                // Fall.
+                'direction: for direction in &DIRECTIONS {
+                    let next_pos = current_pos + *direction;
+                    let next_cell = next_pos.filter(|it| self.is_in_bounds(it)).map(|it| self.cell(&it));
+
+                    match next_cell {
+                        // Empty. Fall.
+                        Some(Cell::Empty) => {
+                            current_pos = next_pos.expect("position should exist since cell exist");
+                            continue 'step;
+                        }
+                        // Blocked. Check next direction.
+                        Some(Cell::Rock) | Some(Cell::Sand) => {
+                            continue 'direction;
+                        }
+                        // Out of bounds. Can't settle. Abort.
+                        None => {
+                            break 'flow;
+                        }
                     }
-                    // Blocked. Check next direction.
-                    Some(Cell::Rock) | Some(Cell::Sand) => {
-                        continue 'direction;
-                    }
-                    // Out of bounds. Can settle. Abort.
-                    None => {
-                        return false;
+                }
+
+                // Can't fall anymore. Settle.
+                *self.cell_mut(&current_pos) = Cell::Sand;
+                count += 1;
+                continue 'flow;
+            }
+        }
+        count
+    }
+
+    fn fill(&mut self, start: &Position) -> usize {
+        // Put the first sand block.
+        self.grid[start.y()][start.x()] = Cell::Sand;
+
+        // Count of sand blocks added. First one is already done.
+        let mut count = 1;
+
+        // Make the sand flow, line by line.
+        // Start at the line where the starting sand block is.
+        let mut depth = 0;
+        for y in start.y()..H - 1 {
+            // Last count.
+            let last_count = count;
+
+            // For each sand block in current line, try to put a other sand block in each direction.
+            // Simulation will end up in a pyramid shape. So no need to simulate the whole line.
+            for x in (start.x() - depth)..=(start.x() + depth) {
+                if self.grid[y][x] == Cell::Sand {
+                    for other_x in [x, x - 1, x + 1] {
+                        if self.grid[y + 1][other_x] == Cell::Empty {
+                            self.grid[y + 1][other_x] = Cell::Sand;
+                            count += 1;
+                        }
                     }
                 }
             }
 
-            // Can't fall anymore. Settle.
-            *self.cell_mut(&current_pos) = Cell::Sand;
-            return true;
+            // Abort if no sand block was added.
+            if last_count == count { break; }
+
+            // Increase depth.
+            depth += 1;
         }
+        count
     }
 }
 
