@@ -41,7 +41,7 @@ impl Input {
     }
 
     fn part_2(&self) -> i64 {
-        // This is quite a long process, but it can be parallelized.
+        // This is quite a long process (400 ms), but it can be parallelized (down to 11 ms).
         let thread_count = thread::available_parallelism().map(|it| it.get()).unwrap_or(1);
 
         // Channel to receive the answer.
