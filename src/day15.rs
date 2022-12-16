@@ -8,7 +8,7 @@ mod util;
 
 // Optimisation opportunity : find all intersections of the sensors (it's diamond shaped).
 // For each of them, check if the position just bellow is inside one of the sensors ranges.
-// If not, it's the positions we are looking for.
+// If not, it's the positions we are looking for. For now, this "brute force" solution will do.
 
 const PART_1_HEIGHT: i64 = 2_000_000;
 // const PART_1_HEIGHT: i64 = 10;
