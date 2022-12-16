@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
@@ -28,35 +26,33 @@ struct Input {
 
 impl Input {
     fn part_1(&self) -> i64 {
-        // Extract slices.
-        let slices = self.report.slices(PART_1_HEIGHT);
+        // Extract intervals.
+        let intervals = self.report.slice(PART_1_HEIGHT);
 
-        // Merge slices
-        let merged_slices = Report::merge(slices);
+        // Merge intervals.
+        let intervals = Report::merge(intervals);
 
-        // Counts positions covered by slice.
-        Report::length(&merged_slices)
+        // Counts positions covered by interval.
+        Report::length(&intervals)
     }
 
     fn part_2(&self) -> i64 {
-        let mut position = None;
         for y in 0..PART_2_HEIGHT {
-            if y % 100 == 0 { println!("{}", y); } // Omg....
-            let slices = self.report.slices(y);
-            for x in 0..PART_2_WIDTH {
-                let mut exist = false;
-                for slice in &slices {
-                    if slice.contains(x) {
-                        exist = true;
-                        break;
-                    }
-                }
-                if !exist {
-                    position = Some(vec2!(x, y));
-                }
+            // Extract intervals.
+            let intervals = self.report.slice(y);
+            // Trim intervals to problem size.
+            let intervals = Report::trim(intervals, Interval::new(0, PART_2_WIDTH));
+            // Merge intervals.
+            let intervals = Report::merge(intervals);
+            // If there is a hole, there will be two intervals after merging the others.
+            if intervals.len() >= 2 {
+                // The hole is at the end of the first interval.
+                let x = intervals[0].end + 1;
+
+                return x * PART_2_WIDTH + y;
             }
         }
-        position.map(|it| it.x() * PART_2_MULTIPLIER + it.y()).unwrap_or(0)
+        0
     }
 }
 
@@ -68,19 +64,19 @@ struct Report {
 }
 
 impl Report {
-    fn slices(&self, height: i64) -> Vec<Slice> {
+    fn slice(&self, height: i64) -> Vec<Interval> {
         self.sensors
             .iter()
             .filter_map(|sensor| {
-                // Find all sensors that overlap with line at height.
                 let x = sensor.position.x();
                 let y = sensor.position.y();
                 let distance = sensor.distance;
 
-                // How much does this sensor overlap ?
+                // First, get distance from the center of the sensor the the line.
+                // Then, remove distance from the beacon. This is the overlap radius.
                 let overlap = distance - (height - y).abs();
                 if overlap >= 0 {
-                    Some(Slice::new(x - overlap, x + overlap))
+                    Some(Interval::new(x - overlap, x + overlap))
                 } else {
                     None
                 }
@@ -88,30 +84,44 @@ impl Report {
             .collect()
     }
 
-    fn merge(mut slices: Vec<Slice>) -> Vec<Slice> {
-        // Sort slices first (by start value).
-        slices.sort();
+    fn merge(mut intervals: Vec<Interval>) -> Vec<Interval> {
+        // Sort by start value.
+        intervals.sort_by_key(|it| it.start);
 
-        // Current slice that we are merging into.
+        // Fold intervals into each other, starting at the first one.
         let mut current = 0;
-        for other in 1..slices.len() {
-            let other_slice = slices[other];
-            let current_slice = &mut slices[current];
+        for other in 1..intervals.len() {
+            let other_interval = intervals[other];
+            let current_interval = &mut intervals[current];
 
-            // Merge into current if overlapping at the end.
-            if current_slice.overlap_end(&other_slice) {
-                current_slice.merge_end(&other_slice);
+            if current_interval.overlap_end(&other_interval) {
+                current_interval.merge_end(&other_interval);
             } else {
                 current += 1;
-                slices[current] = other_slice;
+                intervals[current] = other_interval;
             }
         }
-        slices.resize_with(slices.len().min(current + 1), || panic!("new size should be smaller or equal after merging"));
 
-        slices
+        // Remove intervals after current. They were all merged.
+        intervals.resize_with(intervals.len().min(current + 1), || panic!("new size should be smaller or equal after merging"));
+        intervals
     }
 
-    fn length(slices: &Vec<Slice>) -> i64 {
+    fn trim(intervals: Vec<Interval>, interval: Interval) -> Vec<Interval> {
+        // Remove intervals completely outside.
+        // Them, trim them to fit exactly.
+        intervals
+            .into_iter()
+            .filter(|it| interval.overlap(&it))
+            .map(|mut it| {
+                it.trim(&interval);
+                it
+            })
+            .collect()
+    }
+
+    fn length(slices: &Vec<Interval>) -> i64 {
+        // Sum of the lengths is equal to the total length covered.
         slices.iter().map(|it| it.len()).sum()
     }
 }
@@ -123,12 +133,12 @@ struct Sensor {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-struct Slice {
+struct Interval {
     start: i64,
     end: i64,
 }
 
-impl Slice {
+impl Interval {
     fn new(start: i64, end: i64) -> Self {
         Self {
             start,
@@ -140,28 +150,36 @@ impl Slice {
         self.end - self.start
     }
 
-    fn contains(&self, value: i64) -> bool {
-        self.start <= value && value <= self.end
+    fn overlap(&self, other: &Self) -> bool {
+        self.overlap_start(&other) || self.overlap_end(&other)
+    }
+
+    fn overlap_start(&self, other: &Self) -> bool {
+        self.start <= other.end
     }
 
     fn overlap_end(&self, other: &Self) -> bool {
         other.start <= self.end
     }
 
+    #[allow(unused)]
+    fn merge(&mut self, other: &Self) {
+        self.merge_start(other);
+        self.merge_end(other);
+    }
+
+    #[allow(unused)]
+    fn merge_start(&mut self, other: &Self) {
+        self.start = self.start.min(other.start);
+    }
+
     fn merge_end(&mut self, other: &Self) {
         self.end = self.end.max(other.end);
     }
-}
 
-impl Ord for Slice {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.start.cmp(&other.start)
-    }
-}
-
-impl PartialOrd<Self> for Slice {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+    fn trim(&mut self, other: &Self) {
+        self.start = self.start.max(other.start);
+        self.end = self.end.min(other.end)
     }
 }
 
