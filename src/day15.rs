@@ -1,3 +1,7 @@
+use std::thread;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+
 use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
@@ -37,22 +41,51 @@ impl Input {
     }
 
     fn part_2(&self) -> i64 {
-        for y in 0..PART_2_HEIGHT {
-            // Extract intervals.
-            let intervals = self.report.slice(y);
-            // Trim intervals to problem size.
-            let intervals = Report::trim(intervals, Interval::new(0, PART_2_WIDTH));
-            // Merge intervals.
-            let intervals = Report::merge(intervals);
-            // If there is a hole, there will be two intervals after merging the others.
-            if intervals.len() >= 2 {
-                // The hole is at the end of the first interval.
-                let x = intervals[0].end + 1;
+        // This is quite a long process, but it can be parallelized.
+        let thread_count = thread::available_parallelism().map(|it| it.get()).unwrap_or(1);
 
-                return x * PART_2_WIDTH + y;
+        // Channel to receive the answer.
+        let found = Arc::new(AtomicBool::new(false));
+        let value = Arc::new(AtomicI64::new(0));
+
+        // Create threads.
+        thread::scope(|s| {
+            let thread_height = (PART_2_HEIGHT as usize / thread_count) as i64;
+            for i in 0..thread_count {
+                let found = found.clone();
+                let value = value.clone();
+                s.spawn(move || {
+                    let start = i as i64 * thread_height;
+                    let end = start + thread_height;
+
+                    for y in start..end {
+                        // Has a thread found it yet ?
+                        if found.load(Ordering::Relaxed) { break; }
+
+                        // Extract intervals.
+                        let intervals = self.report.slice(y);
+                        // Trim intervals to problem size.
+                        let intervals = Report::trim(intervals, Interval::new(0, PART_2_WIDTH));
+                        // Merge intervals.
+                        let intervals = Report::merge(intervals);
+                        // If there is a hole, there will be two intervals after merging the others.
+                        if intervals.len() >= 2 {
+                            // We found the hole. Stop everything!
+                            found.store(true, Ordering::Relaxed);
+
+                            // The hole is at the end of the first interval.
+                            let x = intervals[0].end + 1;
+
+                            // Submit the result.
+                            value.store(x * PART_2_MULTIPLIER + y, Ordering::Relaxed);
+                            break;
+                        }
+                    }
+                });
             }
-        }
-        0
+        });
+
+        value.load(Ordering::Relaxed)
     }
 }
 
