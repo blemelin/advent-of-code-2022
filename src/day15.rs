@@ -4,6 +4,13 @@ use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
+const PART_1_HEIGHT: i64 = 2_000_000;
+// const PART_1_HEIGHT: i64 = 10;
+const PART_2_HEIGHT: i64 = 4_000_000;
+// const PART_2_HEIGHT: i64 = 20;
+const PART_2_WIDTH: i64 = PART_2_HEIGHT;
+const PART_2_MULTIPLIER: i64 = 4_000_000;
+
 fn main() {
     let (t0, input) = run(|| read::<Input, _>("inputs/day15.txt"));
     let (t1, p1) = run(|| input.part_1());
@@ -21,20 +28,35 @@ struct Input {
 
 impl Input {
     fn part_1(&self) -> i64 {
-        // Extract slices at height 2 000 000.
-        let slices = self.report.slices(2_000_000);
-        //let slices = self.report.slices(10);
+        // Extract slices.
+        let slices = self.report.slices(PART_1_HEIGHT);
+
+        // Merge slices
+        let merged_slices = Report::merge(slices);
 
         // Counts positions covered by slice.
-        slices.iter().map(|it| it.len()).sum()
+        Report::length(&merged_slices)
     }
 
-    fn part_2(&self) -> u64 {
-        // Try to find a slice have
-        for y in 0..20 {
-
+    fn part_2(&self) -> i64 {
+        let mut position = None;
+        for y in 0..PART_2_HEIGHT {
+            if y % 100 == 0 { println!("{}", y); } // Omg....
+            let slices = self.report.slices(y);
+            for x in 0..PART_2_WIDTH {
+                let mut exist = false;
+                for slice in &slices {
+                    if slice.contains(x) {
+                        exist = true;
+                        break;
+                    }
+                }
+                if !exist {
+                    position = Some(vec2!(x, y));
+                }
+            }
         }
-        0
+        position.map(|it| it.x() * PART_2_MULTIPLIER + it.y()).unwrap_or(0)
     }
 }
 
@@ -47,8 +69,7 @@ struct Report {
 
 impl Report {
     fn slices(&self, height: i64) -> Vec<Slice> {
-        // Collect all slices.
-        let mut slices: Vec<Slice> = self.sensors
+        self.sensors
             .iter()
             .filter_map(|sensor| {
                 // Find all sensors that overlap with line at height.
@@ -64,15 +85,20 @@ impl Report {
                     None
                 }
             })
-            .collect();
+            .collect()
+    }
 
+    fn merge(mut slices: Vec<Slice>) -> Vec<Slice> {
+        // Sort slices first (by start value).
+        slices.sort();
 
-        // Merge overlapping slices.
-        let mut current = 0; // Current slice that we are merging into.
-        slices.sort(); // Sort slices (by start value).
+        // Current slice that we are merging into.
+        let mut current = 0;
         for other in 1..slices.len() {
             let other_slice = slices[other];
             let current_slice = &mut slices[current];
+
+            // Merge into current if overlapping at the end.
             if current_slice.overlap_end(&other_slice) {
                 current_slice.merge_end(&other_slice);
             } else {
@@ -82,8 +108,11 @@ impl Report {
         }
         slices.resize_with(slices.len().min(current + 1), || panic!("new size should be smaller or equal after merging"));
 
-        // Resulting non-overlapping slices.
         slices
+    }
+
+    fn length(slices: &Vec<Slice>) -> i64 {
+        slices.iter().map(|it| it.len()).sum()
     }
 }
 
@@ -109,6 +138,10 @@ impl Slice {
 
     fn len(&self) -> i64 {
         self.end - self.start
+    }
+
+    fn contains(&self, value: i64) -> bool {
+        self.start <= value && value <= self.end
     }
 
     fn overlap_end(&self, other: &Self) -> bool {
