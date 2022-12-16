@@ -6,11 +6,14 @@ use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
+// Optimisation opportunity : find all intersections of the scanners (it's diamond shaped).
+// For each of them, check if the position just bellow is inside one of the scanner ranges.
+// If not, it's the positions we are looking for.
+
 const PART_1_HEIGHT: i64 = 2_000_000;
 // const PART_1_HEIGHT: i64 = 10;
 const PART_2_HEIGHT: i64 = 4_000_000;
 // const PART_2_HEIGHT: i64 = 20;
-const PART_2_WIDTH: i64 = PART_2_HEIGHT;
 const PART_2_MULTIPLIER: i64 = 4_000_000;
 
 fn main() {
@@ -41,7 +44,7 @@ impl Input {
     }
 
     fn part_2(&self) -> i64 {
-        // This is quite a long process (400 ms), but it can be parallelized (down to 11 ms).
+        // This is quite a long process (400 ms), but it can be parallelized (down to 10 ms).
         let thread_count = thread::available_parallelism().map(|it| it.get()).unwrap_or(1);
 
         // Channel to receive the answer.
@@ -64,10 +67,9 @@ impl Input {
 
                         // Extract intervals.
                         let intervals = self.report.slice(y);
-                        // Trim intervals to problem size.
-                        let intervals = Report::trim(intervals, Interval::new(0, PART_2_WIDTH));
                         // Merge intervals.
                         let intervals = Report::merge(intervals);
+
                         // If there is a hole, there will be two intervals after merging the others.
                         if intervals.len() >= 2 {
                             // We found the hole. Stop everything!
@@ -140,19 +142,6 @@ impl Report {
         intervals
     }
 
-    fn trim(intervals: Vec<Interval>, interval: Interval) -> Vec<Interval> {
-        // Remove intervals completely outside.
-        // Them, trim them to fit exactly.
-        intervals
-            .into_iter()
-            .filter(|it| interval.overlap(&it))
-            .map(|mut it| {
-                it.trim(&interval);
-                it
-            })
-            .collect()
-    }
-
     fn length(slices: &Vec<Interval>) -> i64 {
         // Sum of the lengths is equal to the total length covered.
         slices.iter().map(|it| it.len()).sum()
@@ -183,10 +172,12 @@ impl Interval {
         self.end - self.start
     }
 
+    #[allow(unused)]
     fn overlap(&self, other: &Self) -> bool {
         self.overlap_start(&other) || self.overlap_end(&other)
     }
 
+    #[allow(unused)]
     fn overlap_start(&self, other: &Self) -> bool {
         self.start <= other.end
     }
@@ -208,11 +199,6 @@ impl Interval {
 
     fn merge_end(&mut self, other: &Self) {
         self.end = self.end.max(other.end);
-    }
-
-    fn trim(&mut self, other: &Self) {
-        self.start = self.start.max(other.start);
-        self.end = self.end.min(other.end)
     }
 }
 
