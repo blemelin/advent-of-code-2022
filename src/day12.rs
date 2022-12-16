@@ -173,18 +173,18 @@ impl Heightmap {
         }
 
         PathSearch {
+            end,
             distances,
             previous,
-            end,
         }
     }
 }
 
 #[derive(Debug)]
 struct PathSearch {
+    end: Position,
     distances: HashMap<Position, u64>,
     previous: HashMap<Position, Option<Position>>,
-    end: Position,
 }
 
 impl PathSearch {

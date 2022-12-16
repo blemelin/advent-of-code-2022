@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap, BTreeMap, HashSet};
 use util::{FromLine, FromLines, read, run};
 
 mod util;
@@ -24,7 +24,10 @@ struct Input {
 
 impl Input {
     fn part_1(&self) -> u64 {
-        self.system.search(Id(['A', 'A']));
+        let search = self.system.search(Id(['A', 'A']), 30);
+        for item in search.released_pressures {
+            println!("{:?} - {}", item.id, item.released_pressure);
+        }
         0
     }
 
@@ -52,7 +55,7 @@ struct PressureSystem {
 }
 
 impl PressureSystem {
-    fn search(&self, end: Id) -> PathSearch {
+    fn search(&self, target: Id, step: u64) -> PressureSearch {
         #[derive(Debug, Eq, PartialEq)]
         struct Node(Id, u64);
 
@@ -77,12 +80,12 @@ impl PressureSystem {
 
         // Valves to visit.
         let mut visit_queue: BinaryHeap<Node> = BinaryHeap::with_capacity(positions.len());
-        visit_queue.push(Node(end, 0));
+        visit_queue.push(Node(target, 0));
 
         // Distance from end to every other valves. Defaults to infinity.
         // Distance to end is 0. If end doesn't exist in distances, nothing happens.
         let mut distances: HashMap<Id, u64> = positions.iter().map(|it| (*it, u64::MAX)).collect();
-        distances.entry(end).and_modify(|distance| *distance = 0);
+        distances.entry(target).and_modify(|distance| *distance = 0);
 
         // Map a valve to the next valve to go to get closer to the end. Default to None.
         let mut previous: HashMap<Id, Option<Id>> = positions.iter().map(|it| (*it, None)).collect();
@@ -111,12 +114,33 @@ impl PressureSystem {
             }
         }
 
-        PathSearch
+        // Compute released pressure for each valve
+        let mut pressures = Vec::with_capacity(positions.len());
+        for (id, distance) in distances.iter() {
+            let valve = self.valves.get(id).expect("valve should exist");
+            pressures.push(PressureSearchItem {
+                id: *id,
+                released_pressure: (step - distance - 2) * valve.flow_rate,
+            })
+        }
+        pressures.sort_by(|lhs, rhs| rhs.released_pressure.cmp(&lhs.released_pressure));
+
+        PressureSearch {
+            released_pressures: pressures
+        }
     }
 }
 
 #[derive(Debug)]
-struct PathSearch;
+struct PressureSearch {
+    released_pressures: Vec<PressureSearchItem>,
+}
+
+#[derive(Debug)]
+struct PressureSearchItem {
+    id: Id,
+    released_pressure: u64,
+}
 
 #[derive(Debug)]
 struct Valve {
