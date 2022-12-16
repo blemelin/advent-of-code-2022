@@ -6,8 +6,8 @@ use util::{FromLine, FromLines, read, run, Vec2};
 
 mod util;
 
-// Optimisation opportunity : find all intersections of the scanners (it's diamond shaped).
-// For each of them, check if the position just bellow is inside one of the scanner ranges.
+// Optimisation opportunity : find all intersections of the sensors (it's diamond shaped).
+// For each of them, check if the position just bellow is inside one of the sensors ranges.
 // If not, it's the positions we are looking for.
 
 const PART_1_HEIGHT: i64 = 2_000_000;
